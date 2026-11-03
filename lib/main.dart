@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';  // <-- TAMBAHKAN INI
 import 'screens/home_screen.dart';
 
-void main() {
+void main() async {                                 // <-- UBAH jadi async
+  WidgetsFlutterBinding.ensureInitialized();         // <-- TAMBAHKAN INI
+  await initializeDateFormatting('id_ID', null);     // <-- TAMBAHKAN INI
   runApp(const MyApp());
 }
 
