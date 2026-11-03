@@ -173,14 +173,16 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     });
   }
 
-  // --- FUNGSI CETAK PDF SAJA (TANPA SHARE) ---
+  // --- FUNGSI CETAK PDF (KIRIM BYTES LANGSUNG KE FILE PICKER) ---
   Future<void> _buatDanSimpanPdf(GensetModel item) async {
     setState(() => _isProcessingPdf = true);
     try {
+      // 1. Generate PDF ke dalam bentuk Bytes
       final Uint8List pdfBytes = await PdfGenerator.buatPdf(item);
       
-      // Menggunakan API FilePicker versi baru (bebas peringatan deprecated)
-      final Uri? outputFile = await FilePicker.saveFile(
+      // 2. Kirim bytes langsung ke FilePicker.saveFile
+      // FilePicker akan menulis file ke lokasi yang dipilih pengguna
+      final Uri? outputUri = await FilePicker.saveFile(
         dialogTitle: 'Simpan PDF ke...',
         fileName: '${item.id}.pdf',
         bytes: pdfBytes,
@@ -190,9 +192,9 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
       if (!mounted) return;
       setState(() => _isProcessingPdf = false);
 
-      if (outputFile != null) {
+      if (outputUri != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PDF berhasil disimpan: $outputFile')),
+          SnackBar(content: Text('PDF berhasil disimpan: $outputUri')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
