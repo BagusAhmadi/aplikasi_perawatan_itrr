@@ -36,7 +36,8 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   };
 
   final Map<String, String> _angkaValues = {
-    'Battery Charger': '', 'Tegangan Batteray': '',
+    'Battery Charger': '', 
+    'Tegangan Battery': '', // Typo sudah diperbaiki
     'Tegangan Output F/F': '', 'Tegangan Output F/N': '',
     'Frekuensi': '', 'Cos Phi': '', 'Rpm Motor': '',
     'Hour meter ON': '', 'Hour meter OFF': '',
@@ -89,7 +90,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
     final tanggalSimpan = _pilihanTanggal == 'hari_ini' ? DateTime.now() : _tanggalTerpilih;
     final idFile = 'Genset_${_pilihanGedung}_${DateFormat('yyyy-MM-dd').format(tanggalSimpan)}';
 
-    // Cek duplikasi file (jika bukan mode edit)
     if (widget.dataEdit == null) {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/$idFile.json');
@@ -109,7 +109,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
 
     setState(() => _isSaving = true);
     try {
-      // Kumpulkan data pelaksana
       List<String> daftarPelaksana = _pelaksanaControllers.map((c) => c.text.trim()).where((t) => t.isNotEmpty).toList();
       if (_koordinatorController.text.trim().isNotEmpty) {
         daftarPelaksana.add('Koordinator: ${_koordinatorController.text.trim()}');
@@ -120,7 +119,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
         tanggal: tanggalSimpan,
         gedung: _pilihanGedung.replaceAll('_', ' '),
         radioSebelum: _radioValues,
-        angkaSaat: _angkaValues, // <-- Data angka sudah terisi via onChanged
+        angkaSaat: _angkaValues,
         pelaksana: daftarPelaksana,
         catatan: _catatanController.text.trim(),
       );
@@ -145,9 +144,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
     }
   }
 
-  // ==========================================
-  // BAGIAN 4: DIALOG BERHASIL & BAGIKAN PDF
-  // ==========================================
   void _tampilkanDialogBerhasil(Uint8List pdfBytes, String fileName) {
     showDialog(
       context: context,
@@ -188,7 +184,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   }
 
   // ==========================================
-  // BAGIAN 5: TAMPILAN UI (BUILD)
+  // BAGIAN 4: TAMPILAN UI (BUILD)
   // ==========================================
   @override
   Widget build(BuildContext context) {
@@ -285,9 +281,9 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                   onChanged: (val) => _angkaValues['Battery Charger'] = val,
                 ),
                 CustomNumberField(
-                  label: 'Tegangan Batteray',
-                  initialValue: _angkaValues['Tegangan Batteray'],
-                  onChanged: (val) => _angkaValues['Tegangan Batteray'] = val,
+                  label: 'Tegangan Battery', // Typo sudah diperbaiki
+                  initialValue: _angkaValues['Tegangan Battery'],
+                  onChanged: (val) => _angkaValues['Tegangan Battery'] = val,
                 ),
               ],
             ),

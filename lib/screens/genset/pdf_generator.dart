@@ -11,15 +11,13 @@ class PdfGenerator {
     final formatter = DateFormat('EEEE, dd MMMM yyyy, HH:mm', 'id_ID');
     final waktuCetak = '${formatter.format(DateTime.now())} WIB';
 
-    // ==========================================
-    // BAGIAN 1: MEMUAT LOGO (OPSIONAL)
-    // ==========================================
+    // Memuat logo (Opsional)
     pw.ImageProvider? logoImage;
     try {
       final ByteData logoData = await rootBundle.load('assets/logo.png');
       logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
     } catch (e) {
-      // Abaikan jika logo belum ada
+      // Abaikan jika logo tidak ada
     }
 
     doc.addPage(
@@ -67,12 +65,24 @@ class PdfGenerator {
                 children: [
                   pw.TableRow(children: [
                     pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Item')),
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Kondisi')),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Kondisi / Nilai')),
                   ]),
+                  
+                  // Data Radio (Baik/Rusak)
                   ...data.radioSebelum.entries.map((e) => pw.TableRow(children: [
                     pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(e.key)),
                     pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(e.value.toUpperCase())),
                   ])),
+                  
+                  // Data Angka "Sebelum Running"
+                  pw.TableRow(children: [
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Battery Charger')),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(data.angkaSaat['Battery Charger'] ?? '-')),
+                  ]),
+                  pw.TableRow(children: [
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Tegangan Battery')),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(data.angkaSaat['Tegangan Battery'] ?? '-')),
+                  ]),
                 ],
               ),
               pw.SizedBox(height: 16),
@@ -89,9 +99,14 @@ class PdfGenerator {
                     pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Item')),
                     pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Nilai')),
                   ]),
-                  ...data.angkaSaat.entries.map((e) => pw.TableRow(children: [
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(e.key)),
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(e.value)),
+                  // Hanya data "Saat Running"
+                  ...[
+                    'Tegangan Output F/F', 'Tegangan Output F/N', 'Frekuensi', 'Cos Phi', 
+                    'Rpm Motor', 'Hour meter ON', 'Hour meter OFF', 'Temperatur Mesin', 
+                    'Temperatur Air Cooler', 'Temperatur Oli'
+                  ].map((key) => pw.TableRow(children: [
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(key)),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(data.angkaSaat[key] ?? '-')),
                   ])),
                 ],
               ),
