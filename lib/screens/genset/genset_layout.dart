@@ -40,7 +40,6 @@ class _GensetLayoutState extends State<GensetLayout> {
       drawer: isMobile ? Drawer(child: _buildSidebarContent()) : null,
       body: Row(
         children: [
-          // Sidebar untuk Desktop
           if (!isMobile)
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
@@ -50,7 +49,6 @@ class _GensetLayoutState extends State<GensetLayout> {
             ),
           if (!isMobile) const VerticalDivider(width: 1, thickness: 1),
           
-          // Area Konten Utama
           Expanded(
             child: Container(
               color: Colors.grey[100],
@@ -64,9 +62,6 @@ class _GensetLayoutState extends State<GensetLayout> {
     );
   }
 
-  // ==========================================
-  // BAGIAN 2: ISI SIDEBAR
-  // ==========================================
   Widget _buildSidebarContent({bool isDesktop = false}) {
     return Column(
       children: [
@@ -144,7 +139,7 @@ class _GensetLayoutState extends State<GensetLayout> {
 }
 
 // ==========================================
-// BAGIAN 3: HALAMAN RIWAYAT (Edit, Hapus, Cetak PDF)
+// BAGIAN 3: HALAMAN RIWAYAT (KALENDER KUSTOM)
 // ==========================================
 class _RiwayatGensetScreen extends StatefulWidget {
   const _RiwayatGensetScreen();
@@ -156,12 +151,18 @@ class _RiwayatGensetScreen extends StatefulWidget {
 class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
   List<GensetModel> _data = [];
   bool _isLoading = true;
-  bool _isProcessingPdf = false; 
+  bool _isProcessingPdf = false;
+
+  // State untuk Kalender
+  DateTime _currentMonth = DateTime.now();
+  DateTime? _selectedDate;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    // Default pilih hari ini
+    _selectedDate = DateTime.now();
   }
 
   Future<void> _loadData() async {
@@ -173,15 +174,12 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     });
   }
 
-  // --- FUNGSI CETAK PDF (KIRIM BYTES LANGSUNG KE FILE PICKER) ---
+  // --- FUNGSI CETAK PDF ---
   Future<void> _buatDanSimpanPdf(GensetModel item) async {
     setState(() => _isProcessingPdf = true);
     try {
-      // 1. Generate PDF ke dalam bentuk Bytes
       final Uint8List pdfBytes = await PdfGenerator.buatPdf(item);
       
-      // 2. Kirim bytes langsung ke FilePicker.saveFile
-      // FilePicker akan menulis file ke lokasi yang dipilih pengguna
       final Uri? outputUri = await FilePicker.saveFile(
         dialogTitle: 'Simpan PDF ke...',
         fileName: '${item.id}.pdf',
@@ -201,7 +199,6 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
           const SnackBar(content: Text('Penyimpanan dibatalkan')),
         );
       }
-
     } catch (e) {
       if (!mounted) return;
       setState(() => _isProcessingPdf = false);
@@ -242,78 +239,228 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     ).then((_) => _loadData()); 
   }
 
-  // ==========================================
-  // BAGIAN 4: TAMPILAN DAFTAR RIWAYAT
-  // ==========================================
+  // --- LOGIKA KALENDER: Cek apakah tanggal punya data ---
+  bool _hasDataOnDate(DateTime date) {
+    return _data.any((item) => 
+      item.tanggal.year == date.year &&
+      item.tanggal.month == date.month &&
+      item.tanggal.day == date.day
+    );
+  }
+
+  // --- LOGIKA KALENDER: Ambil data berdasarkan tanggal terpilih ---
+  List<GensetModel> _getDataForSelectedDate() {
+    if (_selectedDate == null) return [];
+    return _data.where((item) => 
+      item.tanggal.year == _selectedDate!.year &&
+      item.tanggal.month == _selectedDate!.month &&
+      item.tanggal.day == _selectedDate!.day
+    ).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
-    if (_data.isEmpty) {
-      return const Center(child: Text('Belum ada riwayat pengujian.', style: TextStyle(color: Colors.grey)));
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ==========================================
+          // BAGIAN 4: UI KALENDER
+          // ==========================================
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
+            ),
+            child: Column(
+              children: [
+                // Header Bulan & Tombol Navigasi
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left),
+                      onPressed: () => setState(() => _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1)),
+                    ),
+                    Text(
+                      DateFormat('MMMM yyyy', 'id_ID').format(_currentMonth),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right),
+                      onPressed: () => setState(() => _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Nama Hari (Sen, Sel, Rab, ...)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((day) => 
+                    SizedBox(width: 32, child: Text(day, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)))
+                  ).toList(),
+                ),
+                const Divider(),
+                
+                // Grid Tanggal
+                _buildCalendarGrid(),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+
+          // ==========================================
+          // BAGIAN 5: DAFTAR PERBAIKAN DI BAWAH KALENDER
+          // ==========================================
+          if (_selectedDate != null) ...[
+            Text(
+              'Tanggal Terpilih: ${DateFormat('dd MMMM yyyy', 'id_ID').format(_selectedDate!)}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            
+            // Jika tidak ada data
+            if (_getDataForSelectedDate().isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                child: const Text('Tidak ada perbaikan pada tanggal ini.', style: TextStyle(color: Colors.grey)),
+              )
+            else
+              // Jika ada data, tampilkan kartu perbaikan
+              ..._getDataForSelectedDate().map((item) => _buildRiwayatCard(item)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ==========================================
+  // BAGIAN 6: FUNGSI PEMBUAT GRID KALENDER
+  // ==========================================
+  Widget _buildCalendarGrid() {
+    final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final lastDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
+    
+    // Hitung offset hari (Senin=1, Minggu=7)
+    int firstWeekday = firstDayOfMonth.weekday; 
+    int totalDays = lastDayOfMonth.day;
+    
+    List<Widget> dayWidgets = [];
+
+    // Kosongkan kotak sebelum tanggal 1
+    for (int i = 1; i < firstWeekday; i++) {
+      dayWidgets.add(const SizedBox(width: 36, height: 36));
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadData,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _data.length,
-        itemBuilder: (context, index) {
-          final item = _data[index];
-          final tglFormatted = DateFormat('dd/MM/yyyy').format(item.tanggal);
-          
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    // Isi tanggal
+    for (int i = 1; i <= totalDays; i++) {
+      final date = DateTime(_currentMonth.year, _currentMonth.month, i);
+      final hasData = _hasDataOnDate(date);
+      final isSelected = _selectedDate != null && 
+                         _selectedDate!.day == i && 
+                         _selectedDate!.month == _currentMonth.month &&
+                         _selectedDate!.year == _currentMonth.year;
+
+      dayWidgets.add(
+        GestureDetector(
+          onTap: () => setState(() => _selectedDate = date),
+          child: Container(
+            width: 36,
+            height: 36,
+            margin: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              // Warna hijau jika ada data, biru jika dipilih, abu-abu jika kosong
+              color: isSelected 
+                ? const Color(0xFF3F51B5) // Biru (Dipilih)
+                : hasData 
+                  ? Colors.green // Hijau (Ada data)
+                  : Colors.transparent, // Transparan (Kosong)
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelected ? const Color(0xFF3F51B5) : Colors.transparent,
+                width: 2,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '$i',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isSelected || hasData ? Colors.white : Colors.black87,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Wrap(
+      alignment: WrapAlignment.start,
+      spacing: 2,
+      runSpacing: 2,
+      children: dayWidgets,
+    );
+  }
+
+  // ==========================================
+  // BAGIAN 7: KARTU RIWAYAT (Bisa Diklik untuk Edit)
+  // ==========================================
+  Widget _buildRiwayatCard(GensetModel item) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      child: InkWell(
+        onTap: () => _editData(item),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('${item.gedung} - $tglFormatted', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      const Icon(Icons.picture_as_pdf, color: Colors.red),
-                    ],
+                  Text(item.gedung, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Icon(Icons.edit, color: Colors.blue, size: 20),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text('Pelaksana: ${item.pelaksana.isNotEmpty ? item.pelaksana.join(", ") : "-"}', style: const TextStyle(fontSize: 12)),
+              const SizedBox(height: 8),
+              const Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: _isProcessingPdf ? null : () => _hapusData(item),
+                    icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                    label: const Text('Hapus', style: TextStyle(color: Colors.red)),
                   ),
-                  const SizedBox(height: 8),
-                  Text('Pelaksana: ${item.pelaksana.isNotEmpty ? item.pelaksana.join(", ") : "-"}', style: const TextStyle(fontSize: 12)),
-                  const SizedBox(height: 8),
-                  const Divider(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      // Tombol Hapus
-                      TextButton.icon(
-                        onPressed: _isProcessingPdf ? null : () => _hapusData(item),
-                        icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                        label: const Text('Hapus', style: TextStyle(color: Colors.red)),
-                      ),
-                      // Tombol Edit
-                      TextButton.icon(
-                        onPressed: _isProcessingPdf ? null : () => _editData(item),
-                        icon: const Icon(Icons.edit, size: 18),
-                        label: const Text('Edit'),
-                      ),
-                      // Tombol Cetak PDF
-                      ElevatedButton.icon(
-                        onPressed: _isProcessingPdf ? null : () => _buatDanSimpanPdf(item),
-                        icon: _isProcessingPdf 
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(Icons.print, size: 18),
-                        label: const Text('PDF'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3F51B5),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: _isProcessingPdf ? null : () => _buatDanSimpanPdf(item),
+                    icon: _isProcessingPdf 
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.print, size: 18),
+                    label: const Text('PDF'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3F51B5),
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ],
               ),
-            ),
-          );
-        },
+            ],
+          ),
+        ),
       ),
     );
   }
