@@ -46,7 +46,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   final List<TextEditingController> _pelaksanaControllers = List.generate(4, (index) => TextEditingController());
   final TextEditingController _koordinatorController = TextEditingController();
   final TextEditingController _catatanController = TextEditingController();
-  final Map<String, TextEditingController> _angkaControllers = {};
 
   bool _isSaving = false;
 
@@ -69,17 +68,11 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
       }
       _catatanController.text = widget.dataEdit!.catatan;
     }
-
-    // Mengisi controller input angka dengan data lama (jika ada)
-    for (var key in _angkaValues.keys) {
-      _angkaControllers[key] = TextEditingController(text: _angkaValues[key]);
-    }
   }
 
   @override
   void dispose() {
     for (var c in _pelaksanaControllers) { c.dispose(); }
-    for (var c in _angkaControllers.values) { c.dispose(); }
     _koordinatorController.dispose();
     _catatanController.dispose();
     super.dispose();
@@ -116,36 +109,31 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
 
     setState(() => _isSaving = true);
     try {
-      // Ambil data dari form
+      // Kumpulkan data pelaksana
       List<String> daftarPelaksana = _pelaksanaControllers.map((c) => c.text.trim()).where((t) => t.isNotEmpty).toList();
-      
-      // Update data angka terakhir dari controller sebelum disimpan
-      _angkaControllers.forEach((key, controller) {
-        _angkaValues[key] = controller.text;
-      });
+      if (_koordinatorController.text.trim().isNotEmpty) {
+        daftarPelaksana.add('Koordinator: ${_koordinatorController.text.trim()}');
+      }
 
       final dataBaru = GensetModel(
         id: idFile,
         tanggal: tanggalSimpan,
         gedung: _pilihanGedung.replaceAll('_', ' '),
         radioSebelum: _radioValues,
-        angkaSaat: _angkaValues,
+        angkaSaat: _angkaValues, // <-- Data angka sudah terisi via onChanged
         pelaksana: daftarPelaksana,
         catatan: _catatanController.text.trim(),
       );
 
-      // Jika mode edit dan ID berubah (karena tanggal/gedung diubah), hapus file lama
       if (widget.dataEdit != null && widget.dataEdit!.id != idFile) {
         await GensetModel.hapusFile(widget.dataEdit!.id);
       }
 
-      // Simpan file JSON baru
       await GensetModel.simpanKeFile(dataBaru);
       
       if (!mounted) return;
       setState(() => _isSaving = false);
 
-      // Generate PDF ke memori untuk ditawarkan dibagikan
       final pdfBytes = await PdfGenerator.buatPdf(dataBaru);
       if (!mounted) return;
       _tampilkanDialogBerhasil(pdfBytes, dataBaru.id);
@@ -182,7 +170,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
               final tempFile = File('${tempDir.path}/$fileName.pdf');
               await tempFile.writeAsBytes(pdfBytes);
               
-              // Menggunakan API terbaru dari share_plus (menggantikan Share.shareXFiles)
               await SharePlus.instance.share(
                 ShareParams(
                   files: [XFile(tempFile.path)],
@@ -294,10 +281,12 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                 )),
                 CustomNumberField(
                   label: 'Battery Charger',
+                  initialValue: _angkaValues['Battery Charger'],
                   onChanged: (val) => _angkaValues['Battery Charger'] = val,
                 ),
                 CustomNumberField(
                   label: 'Tegangan Batteray',
+                  initialValue: _angkaValues['Tegangan Batteray'],
                   onChanged: (val) => _angkaValues['Tegangan Batteray'] = val,
                 ),
               ],
@@ -317,6 +306,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                 'Temperatur Air Cooler', 'Temperatur Oli'
               ].map((key) => CustomNumberField(
                 label: key,
+                initialValue: _angkaValues[key],
                 onChanged: (val) => _angkaValues[key] = val,
               )).toList(),
             ),
@@ -360,13 +350,12 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
-          const SizedBox(height: 32), // Spasi ekstra di paling bawah
+          const SizedBox(height: 32),
         ],
       ),
     );
   }
 
-  // Helper untuk membuat TextField pelaksana/koordinator
   Widget _buildTextField(String label, String hint, TextEditingController controller) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
