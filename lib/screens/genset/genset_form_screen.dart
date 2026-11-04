@@ -1,3 +1,4 @@
+import 'dart:convert'; // Tambahkan untuk jsonEncode
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -8,10 +9,10 @@ import '../../widgets/accordion_section.dart';
 import '../../widgets/form_inputs.dart';
 import 'genset_model.dart';
 import 'pdf_generator.dart';
+import 'genset_pelaksana_section.dart'; // <-- Import file baru
 
 class GensetFormScreen extends StatefulWidget {
-  final GensetModel? dataEdit;
-  const GensetFormScreen({super.key, this.dataEdit});
+  const GensetFormScreen({super.key});
 
   @override
   State<GensetFormScreen> createState() => _GensetFormScreenState();
@@ -37,7 +38,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
 
   final Map<String, String> _angkaValues = {
     'Battery Charger': '', 
-    'Tegangan Battery': '', // Typo sudah diperbaiki
+    'Tegangan Battery': '',
     'Tegangan Output F/F': '', 'Tegangan Output F/N': '',
     'Frekuensi': '', 'Cos Phi': '', 'Rpm Motor': '',
     'Hour meter ON': '', 'Hour meter OFF': '',
@@ -49,27 +50,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   final TextEditingController _catatanController = TextEditingController();
 
   bool _isSaving = false;
-
-  // ==========================================
-  // BAGIAN 2: INISIALISASI (LOAD DATA EDIT)
-  // ==========================================
-  @override
-  void initState() {
-    super.initState();
-    if (widget.dataEdit != null) {
-      _pilihanGedung = widget.dataEdit!.gedung.replaceAll(' ', '_');
-      _tanggalTerpilih = widget.dataEdit!.tanggal;
-      _pilihanTanggal = 'bukan_hari_ini';
-
-      _radioValues.addAll(widget.dataEdit!.radioSebelum);
-      _angkaValues.addAll(widget.dataEdit!.angkaSaat);
-
-      for (int i = 0; i < widget.dataEdit!.pelaksana.length && i < 4; i++) {
-        _pelaksanaControllers[i].text = widget.dataEdit!.pelaksana[i];
-      }
-      _catatanController.text = widget.dataEdit!.catatan;
-    }
-  }
 
   @override
   void dispose() {
@@ -84,27 +64,26 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   }
 
   // ==========================================
-  // BAGIAN 3: LOGIKA SIMPAN DATA
+  // BAGIAN 2: LOGIKA SIMPAN DATA
   // ==========================================
   Future<void> _simpanData() async {
     final tanggalSimpan = _pilihanTanggal == 'hari_ini' ? DateTime.now() : _tanggalTerpilih;
     final idFile = 'Genset_${_pilihanGedung}_${DateFormat('yyyy-MM-dd').format(tanggalSimpan)}';
 
-    if (widget.dataEdit == null) {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/$idFile.json');
-      if (file.existsSync()) {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Gagal Menyimpan'),
-            content: Text('Data pengujian untuk ${_pilihanGedung.replaceAll('_', ' ')} pada tanggal ${DateFormat('dd/MM/yyyy').format(tanggalSimpan)} sudah ada.'),
-            actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
-          ),
-        );
-        return;
-      }
+    // Cek Duplikasi
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/$idFile.json');
+    if (file.existsSync()) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Gagal Menyimpan'),
+          content: Text('Data untuk ${_pilihanGedung.replaceAll('_', ' ')} pada tanggal ${DateFormat('dd/MM/yyyy').format(tanggalSimpan)} sudah ada.'),
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+        ),
+      );
+      return;
     }
 
     setState(() => _isSaving = true);
@@ -124,10 +103,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
         catatan: _catatanController.text.trim(),
       );
 
-      if (widget.dataEdit != null && widget.dataEdit!.id != idFile) {
-        await GensetModel.hapusFile(widget.dataEdit!.id);
-      }
-
       await GensetModel.simpanKeFile(dataBaru);
       
       if (!mounted) return;
@@ -135,7 +110,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
 
       final pdfBytes = await PdfGenerator.buatPdf(dataBaru);
       if (!mounted) return;
-      _tampilkanDialogBerhasil(pdfBytes, dataBaru.id);
+      _tampilkanDialogBerhasil(dataBaru, pdfBytes);
 
     } catch (e) {
       setState(() => _isSaving = false);
@@ -144,36 +119,38 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
     }
   }
 
-  void _tampilkanDialogBerhasil(Uint8List pdfBytes, String fileName) {
+  // ==========================================
+  // BAGIAN 3: DIALOG BAGIKAN (PDF + JSON)
+  // ==========================================
+  void _tampilkanDialogBerhasil(GensetModel dataBaru, Uint8List pdfBytes) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: const Text('Berhasil Disimpan'),
-        content: const Text('Data berhasil disimpan. Bagikan file PDF sekarang?'),
+        content: const Text('Data berhasil disimpan. Bagikan file PDF dan JSON sekarang?'),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              if (widget.dataEdit != null) Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Tidak'),
           ),
           ElevatedButton.icon(
             onPressed: () async {
               Navigator.pop(ctx);
               final tempDir = await getTemporaryDirectory();
-              final tempFile = File('${tempDir.path}/$fileName.pdf');
-              await tempFile.writeAsBytes(pdfBytes);
+              
+              final tempPdf = File('${tempDir.path}/${dataBaru.id}.pdf');
+              await tempPdf.writeAsBytes(pdfBytes);
+              
+              final tempJson = File('${tempDir.path}/${dataBaru.id}.json');
+              await tempJson.writeAsString(jsonEncode(dataBaru.toJson()));
               
               await SharePlus.instance.share(
                 ShareParams(
-                  files: [XFile(tempFile.path)],
-                  text: 'File Pengujian Genset',
+                  files: [XFile(tempPdf.path), XFile(tempJson.path)],
+                  text: 'Laporan Genset (PDF & JSON)',
                 ),
               );
-              
-              if (widget.dataEdit != null && mounted) Navigator.pop(context);
             },
             icon: const Icon(Icons.share),
             label: const Text('Ya, Bagikan'),
@@ -281,7 +258,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                   onChanged: (val) => _angkaValues['Battery Charger'] = val,
                 ),
                 CustomNumberField(
-                  label: 'Tegangan Battery', // Typo sudah diperbaiki
+                  label: 'Tegangan Battery',
                   initialValue: _angkaValues['Tegangan Battery'],
                   onChanged: (val) => _angkaValues['Tegangan Battery'] = val,
                 ),
@@ -308,27 +285,11 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
             ),
           ),
 
-          // --- SECTION PELAKSANA & CATATAN ---
-          Container(
-            margin: const EdgeInsets.only(top: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('PELAKSANA & CATATAN', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey)),
-                const SizedBox(height: 16),
-                for (int i = 0; i < 4; i++)
-                  _buildTextField('Pelaksana ${i + 1}', 'Nama Pelaksana ${i + 1}', _pelaksanaControllers[i]),
-                _buildTextField('Koordinator Pelaksana Fungsi', 'Nama Koordinator', _koordinatorController),
-                const Text('Catatan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _catatanController, maxLines: 4,
-                  decoration: InputDecoration(hintText: 'Tambahkan catatan...', filled: true, fillColor: Colors.grey[50], border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
-                ),
-              ],
-            ),
+          // --- SECTION PELAKSANA & CATATAN (File Baru) ---
+          GensetPelaksanaSection(
+            pelaksanaControllers: _pelaksanaControllers,
+            koordinatorController: _koordinatorController,
+            catatanController: _catatanController,
           ),
 
           // --- TOMBOL SIMPAN ---
@@ -347,30 +308,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
             ),
           ),
           const SizedBox(height: 32),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTextField(String label, String hint, TextEditingController controller) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
-              filled: true,
-              fillColor: Colors.grey[50],
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
         ],
       ),
     );

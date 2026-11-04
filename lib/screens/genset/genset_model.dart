@@ -21,9 +21,6 @@ class GensetModel {
     required this.catatan,
   });
 
-  // ==========================================
-  // BAGIAN 1: KONVERSI JSON
-  // ==========================================
   Map<String, dynamic> toJson() => {
     'id': id,
     'tanggal': tanggal.toIso8601String(),
@@ -44,9 +41,7 @@ class GensetModel {
     catatan: json['catatan'],
   );
 
-  // ==========================================
-  // BAGIAN 2: SIMPAN, BACA, HAPUS FILE
-  // ==========================================
+  // Simpan manual ke folder aplikasi
   static Future<File> simpanKeFile(GensetModel data) async {
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/${data.id}.json');
@@ -54,6 +49,7 @@ class GensetModel {
     return file;
   }
 
+  // Baca semua data
   static Future<List<GensetModel>> bacaSemua() async {
     final directory = await getApplicationDocumentsDirectory();
     final dir = Directory(directory.path);
@@ -67,18 +63,36 @@ class GensetModel {
         final content = await File(file.path).readAsString();
         result.add(GensetModel.fromJson(jsonDecode(content)));
       } catch (e) {
-        // Abaikan jika ada file korup
+        // Abaikan file korup
       }
     }
     result.sort((a, b) => b.tanggal.compareTo(a.tanggal));
     return result;
   }
 
+  // Hapus data
   static Future<void> hapusFile(String id) async {
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/$id.json');
     if (await file.exists()) {
       await file.delete();
+    }
+  }
+
+  // ==========================================
+  // FUNGSI BARU: IMPORT JSON DARI LUAR
+  // ==========================================
+  static Future<bool> importDariPath(String pathFileJson) async {
+    try {
+      final file = File(pathFileJson);
+      final content = await file.readAsString();
+      final data = GensetModel.fromJson(jsonDecode(content));
+      
+      // Simpan ke folder privat aplikasi
+      await simpanKeFile(data);
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 }

@@ -40,6 +40,7 @@ class _GensetLayoutState extends State<GensetLayout> {
       drawer: isMobile ? Drawer(child: _buildSidebarContent()) : null,
       body: Row(
         children: [
+          // Sidebar untuk Desktop
           if (!isMobile)
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
@@ -49,6 +50,7 @@ class _GensetLayoutState extends State<GensetLayout> {
             ),
           if (!isMobile) const VerticalDivider(width: 1, thickness: 1),
           
+          // Area Konten Utama
           Expanded(
             child: Container(
               color: Colors.grey[100],
@@ -62,6 +64,9 @@ class _GensetLayoutState extends State<GensetLayout> {
     );
   }
 
+  // ==========================================
+  // BAGIAN 2: ISI SIDEBAR
+  // ==========================================
   Widget _buildSidebarContent({bool isDesktop = false}) {
     return Column(
       children: [
@@ -161,7 +166,6 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
   void initState() {
     super.initState();
     _loadData();
-    // Default pilih hari ini
     _selectedDate = DateTime.now();
   }
 
@@ -231,15 +235,43 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     }
   }
 
-  // --- FUNGSI EDIT DATA ---
-  void _editData(GensetModel item) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => GensetFormScreen(dataEdit: item)),
-    ).then((_) => _loadData()); 
+  // --- FUNGSI UPLOAD JSON (API TERBARU) ---
+  Future<void> _uploadJson() async {
+    try {
+      final List<PlatformFile>? result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+
+      final String? path = (result != null && result.isNotEmpty) 
+          ? result.first.path 
+          : null;
+
+      if (path != null && path.isNotEmpty) {
+        final berhasil = await GensetModel.importDariPath(path);
+        
+        if (!mounted) return;
+        
+        if (berhasil) {
+          _loadData(); 
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Data JSON berhasil di-import!'), backgroundColor: Colors.green),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal import. Format JSON tidak valid.'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 
-  // --- LOGIKA KALENDER: Cek apakah tanggal punya data ---
+  // --- LOGIKA KALENDER ---
   bool _hasDataOnDate(DateTime date) {
     return _data.any((item) => 
       item.tanggal.year == date.year &&
@@ -248,7 +280,6 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     );
   }
 
-  // --- LOGIKA KALENDER: Ambil data berdasarkan tanggal terpilih ---
   List<GensetModel> _getDataForSelectedDate() {
     if (_selectedDate == null) return [];
     return _data.where((item) => 
@@ -267,9 +298,22 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ==========================================
-          // BAGIAN 4: UI KALENDER
-          // ==========================================
+          // Tombol Upload JSON
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton.icon(
+              onPressed: _uploadJson,
+              icon: const Icon(Icons.upload_file),
+              label: const Text('Upload JSON'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[700],
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Container Kalender
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -279,7 +323,6 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
             ),
             child: Column(
               children: [
-                // Header Bulan & Tombol Navigasi
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -298,8 +341,6 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                
-                // Nama Hari (Sen, Sel, Rab, ...)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((day) => 
@@ -307,8 +348,6 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
                   ).toList(),
                 ),
                 const Divider(),
-                
-                // Grid Tanggal
                 _buildCalendarGrid(),
               ],
             ),
@@ -316,9 +355,7 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
           
           const SizedBox(height: 24),
 
-          // ==========================================
-          // BAGIAN 5: DAFTAR PERBAIKAN DI BAWAH KALENDER
-          // ==========================================
+          // Daftar Perbaikan
           if (_selectedDate != null) ...[
             Text(
               'Tanggal Terpilih: ${DateFormat('dd MMMM yyyy', 'id_ID').format(_selectedDate!)}',
@@ -326,7 +363,6 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
             ),
             const SizedBox(height: 12),
             
-            // Jika tidak ada data
             if (_getDataForSelectedDate().isEmpty)
               Container(
                 padding: const EdgeInsets.all(16),
@@ -334,7 +370,6 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
                 child: const Text('Tidak ada perbaikan pada tanggal ini.', style: TextStyle(color: Colors.grey)),
               )
             else
-              // Jika ada data, tampilkan kartu perbaikan
               ..._getDataForSelectedDate().map((item) => _buildRiwayatCard(item)),
           ],
         ],
@@ -342,25 +377,20 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     );
   }
 
-  // ==========================================
-  // BAGIAN 6: FUNGSI PEMBUAT GRID KALENDER
-  // ==========================================
+  // Grid Kalender
   Widget _buildCalendarGrid() {
     final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final lastDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
     
-    // Hitung offset hari (Senin=1, Minggu=7)
     int firstWeekday = firstDayOfMonth.weekday; 
     int totalDays = lastDayOfMonth.day;
     
     List<Widget> dayWidgets = [];
 
-    // Kosongkan kotak sebelum tanggal 1
     for (int i = 1; i < firstWeekday; i++) {
       dayWidgets.add(const SizedBox(width: 36, height: 36));
     }
 
-    // Isi tanggal
     for (int i = 1; i <= totalDays; i++) {
       final date = DateTime(_currentMonth.year, _currentMonth.month, i);
       final hasData = _hasDataOnDate(date);
@@ -377,12 +407,11 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
             height: 36,
             margin: const EdgeInsets.all(2),
             decoration: BoxDecoration(
-              // Warna hijau jika ada data, biru jika dipilih, abu-abu jika kosong
               color: isSelected 
-                ? const Color(0xFF3F51B5) // Biru (Dipilih)
+                ? const Color(0xFF3F51B5)
                 : hasData 
-                  ? Colors.green // Hijau (Ada data)
-                  : Colors.transparent, // Transparan (Kosong)
+                  ? Colors.green 
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: isSelected ? const Color(0xFF3F51B5) : Colors.transparent,
@@ -410,56 +439,50 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     );
   }
 
-  // ==========================================
-  // BAGIAN 7: KARTU RIWAYAT (Bisa Diklik untuk Edit)
-  // ==========================================
+  // Kartu Riwayat
   Widget _buildRiwayatCard(GensetModel item) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
-      child: InkWell(
-        onTap: () => _editData(item),
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(item.gedung, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const Icon(Icons.edit, color: Colors.blue, size: 20),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text('Pelaksana: ${item.pelaksana.isNotEmpty ? item.pelaksana.join(", ") : "-"}', style: const TextStyle(fontSize: 12)),
-              const SizedBox(height: 8),
-              const Divider(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton.icon(
-                    onPressed: _isProcessingPdf ? null : () => _hapusData(item),
-                    icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                    label: const Text('Hapus', style: TextStyle(color: Colors.red)),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(item.gedung, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Icon(Icons.check_circle, color: Colors.green, size: 20),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text('Pelaksana: ${item.pelaksana.isNotEmpty ? item.pelaksana.join(", ") : "-"}', style: const TextStyle(fontSize: 12)),
+            const SizedBox(height: 8),
+            const Divider(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: _isProcessingPdf ? null : () => _hapusData(item),
+                  icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                  label: const Text('Hapus', style: TextStyle(color: Colors.red)),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: _isProcessingPdf ? null : () => _buatDanSimpanPdf(item),
+                  icon: _isProcessingPdf 
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.print, size: 18),
+                  label: const Text('PDF'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3F51B5),
+                    foregroundColor: Colors.white,
                   ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: _isProcessingPdf ? null : () => _buatDanSimpanPdf(item),
-                    icon: _isProcessingPdf 
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.print, size: 18),
-                    label: const Text('PDF'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3F51B5),
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
