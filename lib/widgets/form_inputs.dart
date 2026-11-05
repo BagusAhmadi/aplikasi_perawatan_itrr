@@ -8,12 +8,14 @@ class CustomNumberField extends StatelessWidget {
   final String label;
   final String? initialValue;
   final ValueChanged<String>? onChanged;
+  final Widget? bottomWidget; // <-- TAMBAHKAN PARAMETER INI
 
   const CustomNumberField({
-    super.key,
+    super.key, 
     required this.label,
     this.initialValue,
     this.onChanged,
+    this.bottomWidget, // <-- Daftarkan di constructor
   });
 
   @override
@@ -28,7 +30,6 @@ class CustomNumberField extends StatelessWidget {
           onChanged: onChanged,
           keyboardType: TextInputType.number,
           inputFormatters: [
-            // Hanya menerima angka, koma, dan minus
             FilteringTextInputFormatter.allow(RegExp(r'[0-9,-]')),
           ],
           decoration: InputDecoration(
@@ -48,6 +49,12 @@ class CustomNumberField extends StatelessWidget {
             ),
           ),
         ),
+        // Tampilkan widget tambahan (tombol) jika ada
+        if (bottomWidget != null) 
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: bottomWidget,
+          ),
         const Divider(height: 24, thickness: 1, color: Color(0xFFEEEEEE)),
       ],
     );
@@ -58,6 +65,7 @@ class CustomNumberField extends StatelessWidget {
 // BAGIAN 2: WIDGET RADIO BAIK/RUSAK
 // ==========================================
 class CustomRadioRow extends StatelessWidget {
+  // ... (Kode CustomRadioRow sama persis, tidak perlu diubah) ...
   final String label;
   final String groupValue;
   final ValueChanged<String?> onChanged;
