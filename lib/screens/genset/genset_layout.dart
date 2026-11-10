@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'genset_model.dart';
-import 'genset_database.dart'; // <-- Import Database SQLite
+import 'genset_database.dart';
 import 'genset_form_screen.dart';
 import 'pdf_generator.dart';
 import '../home_screen.dart';
@@ -145,7 +147,7 @@ class _GensetLayoutState extends State<GensetLayout> {
 }
 
 // ==========================================
-// BAGIAN 3: HALAMAN RIWAYAT (KALENDER SQL)
+// BAGIAN 3: HALAMAN RIWAYAT (KALENDER & EKSPOR)
 // ==========================================
 class _RiwayatGensetScreen extends StatefulWidget {
   const _RiwayatGensetScreen();
@@ -170,10 +172,9 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     _selectedDate = DateTime.now();
   }
 
-  // --- BACA DATA DARI SQLITE ---
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final data = await GensetDatabase.bacaSemua(); // <-- Ubah ke SQLite
+    final data = await GensetDatabase.bacaSemua();
     setState(() {
       _data = data;
       _isLoading = false;
@@ -214,7 +215,7 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     }
   }
 
-  // --- FUNGSI HAPUS DATA DARI SQLITE ---
+  // --- FUNGSI HAPUS DATA ---
   Future<void> _hapusData(GensetModel item) async {
     final konfirmasi = await showDialog<bool>(
       context: context,
@@ -232,8 +233,119 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     );
 
     if (konfirmasi == true) {
-      await GensetDatabase.hapus(item.id); // <-- Ubah ke SQLite
+      await GensetDatabase.hapus(item.id);
       _loadData(); 
+    }
+  }
+
+  // --- FUNGSI EKSPOR DATABASE ---
+  Future<void> _eksporDatabaseSaja() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('Pilih Data yang Diekspor', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.all_inbox),
+                  title: const Text('Semua Data'),
+                  onTap: () { Navigator.pop(ctx); _prosesEkspor(); },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.calendar_month),
+                  title: const Text('Per Bulan'),
+                  onTap: () { Navigator.pop(ctx); _pilihBulanEkspor(); },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.calendar_today),
+                  title: const Text('Per Hari'),
+                  onTap: () { Navigator.pop(ctx); _pilihHariEkspor(); },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.apartment),
+                  title: const Text('Per Gedung'),
+                  onTap: () { Navigator.pop(ctx); _pilihGedungEkspor(); },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pilihBulanEkspor() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      helpText: 'Pilih Bulan (Tanggal tidak penting)',
+    );
+    if (picked != null) {
+      _prosesEkspor(bulan: picked.month, tahun: picked.year);
+    }
+  }
+
+  Future<void> _pilihHariEkspor() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      _prosesEkspor(tanggal: picked);
+    }
+  }
+
+  Future<void> _pilihGedungEkspor() async {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Pilih Gedung'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(title: const Text('Gedung 11'), onTap: () { Navigator.pop(ctx); _prosesEkspor(gedung: 'gedung 11'); }),
+            ListTile(title: const Text('Gedung 13'), onTap: () { Navigator.pop(ctx); _prosesEkspor(gedung: 'gedung 13'); }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _prosesEkspor({DateTime? tanggal, int? bulan, int? tahun, String? gedung}) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Menyiapkan file database...')),
+    );
+
+    final file = await GensetDatabase.eksporDatabase(
+      filterTanggal: tanggal,
+      filterBulan: bulan,
+      filterTahun: tahun,
+      filterGedung: gedung,
+    );
+
+    if (file != null) {
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          text: 'Backup Database Genset',
+        ),
+      );
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tidak ada data yang sesuai filter untuk diekspor.'), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -264,6 +376,20 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Tombol Ekspor Database
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton.icon(
+              onPressed: _eksporDatabaseSaja,
+              icon: const Icon(Icons.save_alt),              label: const Text('Ekspor Database'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueGrey[700],
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // Container Kalender
           Container(
             padding: const EdgeInsets.all(16),

@@ -153,7 +153,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: const Text('Berhasil Disimpan'),
-        content: const Text('Data berhasil disimpan. Bagikan file PDF dan JSON sekarang?'),
+        content: const Text('Data berhasil disimpan. Bagikan file PDF sekarang?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -163,17 +163,14 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
             onPressed: () async {
               Navigator.pop(ctx);
               final tempDir = await getTemporaryDirectory();
-              
               final tempPdf = File('${tempDir.path}/${dataBaru.id}.pdf');
               await tempPdf.writeAsBytes(pdfBytes);
               
-              final tempJson = File('${tempDir.path}/${dataBaru.id}.json');
-              await tempJson.writeAsString(jsonEncode(dataBaru.toJson()));
-              
+              // Hanya bagikan PDF saja
               await SharePlus.instance.share(
                 ShareParams(
-                  files: [XFile(tempPdf.path), XFile(tempJson.path)],
-                  text: 'Laporan Genset (PDF & JSON)',
+                  files: [XFile(tempPdf.path)],
+                  text: 'Laporan Genset (PDF)',
                 ),
               );
             },
@@ -184,7 +181,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
       ),
     );
   }
-
+  
   // ==========================================
   // BAGIAN 5: TAMPILAN UI (BUILD)
   // ==========================================
