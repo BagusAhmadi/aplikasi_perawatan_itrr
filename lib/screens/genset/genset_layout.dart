@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -238,7 +237,11 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     }
   }
 
-  // --- FUNGSI EKSPOR DATABASE ---
+  // ==========================================
+  // ALUR EKSPOR DATABASE
+  // ==========================================
+  
+  // Langkah 1: Pilih Waktu
   Future<void> _eksporDatabaseSaja() async {
     showModalBottomSheet(
       context: context,
@@ -251,27 +254,35 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Pilih Data yang Diekspor', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text('Pilih Waktu Ekspor', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 ListTile(
                   leading: const Icon(Icons.all_inbox),
                   title: const Text('Semua Data'),
-                  onTap: () { Navigator.pop(ctx); _prosesEkspor(); },
+                  onTap: () { Navigator.pop(ctx); _pilihGedungEkspor(); },
                 ),
                 ListTile(
                   leading: const Icon(Icons.calendar_month),
                   title: const Text('Per Bulan'),
-                  onTap: () { Navigator.pop(ctx); _pilihBulanEkspor(); },
+                  onTap: () async {
+                    Navigator.pop(ctx); 
+                    final picked = await showDatePicker(
+                      context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030),
+                      helpText: 'Pilih Bulan (Tanggal tidak penting)',
+                    );
+                    if (picked != null) _pilihGedungEkspor(bulan: picked.month, tahun: picked.year);
+                  },
                 ),
                 ListTile(
                   leading: const Icon(Icons.calendar_today),
                   title: const Text('Per Hari'),
-                  onTap: () { Navigator.pop(ctx); _pilihHariEkspor(); },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.apartment),
-                  title: const Text('Per Gedung'),
-                  onTap: () { Navigator.pop(ctx); _pilihGedungEkspor(); },
+                  onTap: () async {
+                    Navigator.pop(ctx); 
+                    final picked = await showDatePicker(
+                      context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030),
+                    );
+                    if (picked != null) _pilihGedungEkspor(tanggal: picked);
+                  },
                 ),
               ],
             ),
@@ -281,48 +292,76 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     );
   }
 
-  Future<void> _pilihBulanEkspor() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-      helpText: 'Pilih Bulan (Tanggal tidak penting)',
-    );
-    if (picked != null) {
-      _prosesEkspor(bulan: picked.month, tahun: picked.year);
-    }
-  }
+  // Langkah 2: Pilih Gedung (Ceklist)
+  Future<void> _pilihGedungEkspor({DateTime? tanggal, int? bulan, int? tahun}) async {
+    bool pilihGedung11 = true;
+    bool pilihGedung13 = true;
 
-  Future<void> _pilihHariEkspor() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-    if (picked != null) {
-      _prosesEkspor(tanggal: picked);
-    }
-  }
-
-  Future<void> _pilihGedungEkspor() async {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Pilih Gedung'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(title: const Text('Gedung 11'), onTap: () { Navigator.pop(ctx); _prosesEkspor(gedung: 'gedung 11'); }),
-            ListTile(title: const Text('Gedung 13'), onTap: () { Navigator.pop(ctx); _prosesEkspor(gedung: 'gedung 13'); }),
-          ],
-        ),
-      ),
+      builder: (ctx) {
+        return StatefulBuilder( // StatefulBuilder agar ceklist bisa berubah status
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Pilih Gedung'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CheckboxListTile(
+                    title: const Text('Gedung 11'),
+                    value: pilihGedung11,
+                    onChanged: (val) => setStateDialog(() => pilihGedung11 = val!),
+                  ),
+                  CheckboxListTile(
+                    title: const Text('Gedung 13'),
+                    value: pilihGedung13,
+                    onChanged: (val) => setStateDialog(() => pilihGedung13 = val!),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx), 
+                  child: const Text('Batal')
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    List<String> gedungTerpilih = [];
+                    if (pilihGedung11) gedungTerpilih.add('gedung 11');
+                    if (pilihGedung13) gedungTerpilih.add('gedung 13');
+
+                    if (gedungTerpilih.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Pilih minimal satu gedung!'), backgroundColor: Colors.red),
+                      );
+                      return;
+                    }
+
+                    Navigator.pop(ctx); // Tutup dialog
+                    _prosesEkspor(
+                      tanggal: tanggal,
+                      bulan: bulan,
+                      tahun: tahun,
+                      gedungList: gedungTerpilih,
+                    );
+                  },
+                  child: const Text('Ekspor'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
-  Future<void> _prosesEkspor({DateTime? tanggal, int? bulan, int? tahun, String? gedung}) async {
+  // Langkah 3: Proses dan Bagikan File
+  Future<void> _prosesEkspor({
+    DateTime? tanggal, 
+    int? bulan, 
+    int? tahun, 
+    required List<String> gedungList,
+  }) async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Menyiapkan file database...')),
     );
@@ -331,7 +370,7 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
       filterTanggal: tanggal,
       filterBulan: bulan,
       filterTahun: tahun,
-      filterGedung: gedung,
+      filterGedungList: gedungList,
     );
 
     if (file != null) {
