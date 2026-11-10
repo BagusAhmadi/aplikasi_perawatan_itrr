@@ -8,8 +8,9 @@ import 'package:share_plus/share_plus.dart';
 import '../../widgets/accordion_section.dart';
 import '../../widgets/form_inputs.dart';
 import 'genset_model.dart';
+import 'genset_database.dart';      // Import Database SQLite
 import 'pdf_generator.dart';
-import 'genset_pelaksana_section.dart';
+import 'genset_pelaksana_section.dart'; // Import widget yang dipisah
 
 class GensetFormScreen extends StatefulWidget {
   const GensetFormScreen({super.key});
@@ -64,25 +65,16 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   }
 
   // ==========================================
-  // BAGIAN 2: FUNGSI AMBIL HOUR METER OFF TERAKHIR
+  // BAGIAN 2: AMBIL HOUR METER OFF TERAKHIR (SQL)
   // ==========================================
   Future<void> _ambilHourMeterOffTerakhir() async {
-    final semuaData = await GensetModel.bacaSemua();
-    String? hourOffTerakhir;
-    
-    for (var data in semuaData) {
-      final val = data.angkaSaat['Hour meter OFF'];
-      if (val != null && val.trim().isNotEmpty && val != '-') {
-        hourOffTerakhir = val;
-        break;
-      }
-    }
+    // Memanggil fungsi dari GensetDatabase
+    final hourOffTerakhir = await GensetDatabase.getHourMeterOffTerakhir();
 
     if (hourOffTerakhir != null) {
       setState(() {
-        _angkaValues['Hour meter ON'] = hourOffTerakhir!;
+        _angkaValues['Hour meter ON'] = hourOffTerakhir;
       });
-      
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Hour meter ON diisi otomatis: $hourOffTerakhir')),
@@ -96,15 +88,15 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   }
 
   // ==========================================
-  // BAGIAN 3: LOGIKA SIMPAN DATA
+  // BAGIAN 3: LOGIKA SIMPAN DATA KE SQLITE
   // ==========================================
   Future<void> _simpanData() async {
     final tanggalSimpan = _pilihanTanggal == 'hari_ini' ? DateTime.now() : _tanggalTerpilih;
     final idFile = 'Genset_${_pilihanGedung}_${DateFormat('yyyy-MM-dd').format(tanggalSimpan)}';
 
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/$idFile.json');
-    if (file.existsSync()) {
+    // Cek duplikasi lewat Database (bukan File JSON lagi)
+    final isExist = await GensetDatabase.cekIdExists(idFile);
+    if (isExist) {
       if (!mounted) return;
       showDialog(
         context: context,
@@ -134,11 +126,13 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
         catatan: _catatanController.text.trim(),
       );
 
-      await GensetModel.simpanKeFile(dataBaru);
+      // Simpan ke SQLite
+      await GensetDatabase.simpan(dataBaru);
       
       if (!mounted) return;
       setState(() => _isSaving = false);
 
+      // Generate PDF untuk ditawarkan dibagikan
       final pdfBytes = await PdfGenerator.buatPdf(dataBaru);
       if (!mounted) return;
       _tampilkanDialogBerhasil(dataBaru, pdfBytes);
@@ -305,7 +299,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
             isInnerAccordion: true,
             child: Column(
               children: [
-                // 1. Deretan input pertama
+                // Deret input pertama
                 ...['Tegangan Output F/F', 'Tegangan Output F/N', 'Frekuensi', 'Cos Phi', 
                 'Rpm Motor'].map((key) => CustomNumberField(
                   label: key,
@@ -313,7 +307,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                   onChanged: (val) => _angkaValues[key] = val,
                 )),
                 
-                // 2. Input Hour meter ON dengan tombol tambahan
+                // Input Hour meter ON dengan tombol
                 CustomNumberField(
                   label: 'Hour meter ON',
                   initialValue: _angkaValues['Hour meter ON'],
@@ -331,17 +325,17 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                   ),
                 ),
 
-                // 3. Input Hour meter OFF
+                // Input Hour meter OFF
                 CustomNumberField(
                   label: 'Hour meter OFF',
                   initialValue: _angkaValues['Hour meter OFF'],
                   onChanged: (val) => _angkaValues['Hour meter OFF'] = val,
                 ),
                 
-                // 4. Deretan input Temperatur
+                // Deret input Temperatur
                 ...['Temperatur Mesin', 'Temperatur Air Cooler', 'Temperatur Oli']
                 .map((key) => CustomNumberField(
-                  label: key, // <-- Memperbaiki error positional argument
+                  label: key, 
                   initialValue: _angkaValues[key],
                   onChanged: (val) => _angkaValues[key] = val,
                 )).toList(),
@@ -349,7 +343,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
             ),
           ),
 
-          // --- SECTION PELAKSANA & CATATAN ---
+          // --- SECTION PELAKSANA & CATATAN (File Terpisah) ---
           GensetPelaksanaSection(
             pelaksanaControllers: _pelaksanaControllers,
             koordinatorController: _koordinatorController,

@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'genset_model.dart';
+import 'genset_database.dart'; // <-- Import Database SQLite
 import 'genset_form_screen.dart';
 import 'pdf_generator.dart';
 import '../home_screen.dart';
@@ -144,7 +145,7 @@ class _GensetLayoutState extends State<GensetLayout> {
 }
 
 // ==========================================
-// BAGIAN 3: HALAMAN RIWAYAT (KALENDER KUSTOM)
+// BAGIAN 3: HALAMAN RIWAYAT (KALENDER SQL)
 // ==========================================
 class _RiwayatGensetScreen extends StatefulWidget {
   const _RiwayatGensetScreen();
@@ -169,9 +170,10 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     _selectedDate = DateTime.now();
   }
 
+  // --- BACA DATA DARI SQLITE ---
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final data = await GensetModel.bacaSemua();
+    final data = await GensetDatabase.bacaSemua(); // <-- Ubah ke SQLite
     setState(() {
       _data = data;
       _isLoading = false;
@@ -212,7 +214,7 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     }
   }
 
-  // --- FUNGSI HAPUS DATA ---
+  // --- FUNGSI HAPUS DATA DARI SQLITE ---
   Future<void> _hapusData(GensetModel item) async {
     final konfirmasi = await showDialog<bool>(
       context: context,
@@ -230,44 +232,8 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
     );
 
     if (konfirmasi == true) {
-      await GensetModel.hapusFile(item.id);
+      await GensetDatabase.hapus(item.id); // <-- Ubah ke SQLite
       _loadData(); 
-    }
-  }
-
-  // --- FUNGSI UPLOAD JSON (API TERBARU) ---
-  Future<void> _uploadJson() async {
-    try {
-      final List<PlatformFile>? result = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-      );
-
-      final String? path = (result != null && result.isNotEmpty) 
-          ? result.first.path 
-          : null;
-
-      if (path != null && path.isNotEmpty) {
-        final berhasil = await GensetModel.importDariPath(path);
-        
-        if (!mounted) return;
-        
-        if (berhasil) {
-          _loadData(); 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Data JSON berhasil di-import!'), backgroundColor: Colors.green),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Gagal import. Format JSON tidak valid.'), backgroundColor: Colors.red),
-          );
-        }
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
     }
   }
 
@@ -298,21 +264,6 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Tombol Upload JSON
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton.icon(
-              onPressed: _uploadJson,
-              icon: const Icon(Icons.upload_file),
-              label: const Text('Upload JSON'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green[700],
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
           // Container Kalender
           Container(
             padding: const EdgeInsets.all(16),
