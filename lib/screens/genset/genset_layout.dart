@@ -381,7 +381,8 @@ class _RiwayatGensetScreenState extends State<_RiwayatGensetScreen> {
             alignment: Alignment.centerRight,
             child: ElevatedButton.icon(
               onPressed: _eksporDatabaseSaja,
-              icon: const Icon(Icons.save_alt),              label: const Text('Ekspor Database'),
+              icon: const Icon(Icons.save_alt),
+              label: const Text('Ekspor Database'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blueGrey[700],
                 foregroundColor: Colors.white,
