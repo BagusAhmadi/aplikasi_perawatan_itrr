@@ -6,14 +6,14 @@ import 'package:flutter/services.dart';
 // ==========================================
 class CustomNumberField extends StatelessWidget {
   final String label;
-  final String? initialValue;
+  final TextEditingController? controller; // Menggunakan controller agar teks bisa diupdate dari luar
   final ValueChanged<String>? onChanged;
   final Widget? bottomWidget;
 
   const CustomNumberField({
     super.key, 
     required this.label,
-    this.initialValue,
+    this.controller,
     this.onChanged,
     this.bottomWidget,
   });
@@ -26,10 +26,10 @@ class CustomNumberField extends StatelessWidget {
         Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
         const SizedBox(height: 8),
         TextFormField(
-          initialValue: initialValue,
-          // Jika onChanged null, otomatis TextFormField menjadi read-only
+          controller: controller,
+          // Jika onChanged null, input akan otomatis terkunci (read-only)
           onChanged: onChanged, 
-          enabled: onChanged != null, // <-- Kunci input jika onChanged null
+          enabled: onChanged != null, 
           keyboardType: TextInputType.number,
           inputFormatters: [
             // Hanya menerima angka, koma, dan minus
@@ -46,6 +46,7 @@ class CustomNumberField extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Colors.grey),
             ),
+            // Border saat input dikunci (disabled)
             disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Colors.black26),
@@ -56,7 +57,7 @@ class CustomNumberField extends StatelessWidget {
             ),
           ),
         ),
-        // Tampilkan widget tambahan (seperti checkbox) jika ada
+        // Menampilkan widget tambahan (seperti checkbox) di bawah input
         if (bottomWidget != null) 
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
