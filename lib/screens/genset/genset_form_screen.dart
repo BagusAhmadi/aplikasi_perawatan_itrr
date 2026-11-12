@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -7,9 +8,9 @@ import 'package:share_plus/share_plus.dart';
 import '../../widgets/accordion_section.dart';
 import '../../widgets/form_inputs.dart';
 import 'genset_model.dart';
-import 'genset_database.dart';      // Import Database SQLite
+import 'genset_database.dart';
 import 'pdf_generator.dart';
-import 'genset_pelaksana_section.dart'; // Import widget yang dipisah
+import 'genset_pelaksana_section.dart';
 
 class GensetFormScreen extends StatefulWidget {
   const GensetFormScreen({super.key});
@@ -50,6 +51,18 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   final TextEditingController _catatanController = TextEditingController();
 
   bool _isSaving = false;
+  
+  // State untuk Checkbox Hour meter
+  bool _isHourMeterLocked = false;
+  String? _hourMeterOffSebelumnya;
+  bool _isLoadingHourMeter = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Panggil cek data sebelumnya setelah form dimuat
+    WidgetsBinding.instance.addPostFrameCallback((_) => _cekHourMeterSebelumnya());
+  }
 
   @override
   void dispose() {
@@ -64,36 +77,38 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   }
 
   // ==========================================
-  // BAGIAN 2: AMBIL HOUR METER OFF TERAKHIR (SQL)
+  // BAGIAN 2: FUNGSI CEK HOUR METER SEBELUMNYA
   // ==========================================
-  Future<void> _ambilHourMeterOffTerakhir() async {
-    // Memanggil fungsi dari GensetDatabase
-    final hourOffTerakhir = await GensetDatabase.getHourMeterOffTerakhir();
+  Future<void> _cekHourMeterSebelumnya() async {
+    final tanggalSimpan = _pilihanTanggal == 'hari_ini' ? DateTime.now() : _tanggalTerpilih;
+    
+    setState(() {
+      _isLoadingHourMeter = true;
+      _isHourMeterLocked = false; // Reset checkbox jika tanggal/gedung berubah
+      _hourMeterOffSebelumnya = null;
+      _angkaValues['Hour meter ON'] = '';
+    });
 
-    if (hourOffTerakhir != null) {
-      setState(() {
-        _angkaValues['Hour meter ON'] = hourOffTerakhir;
-      });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Hour meter ON diisi otomatis: $hourOffTerakhir')),
-      );
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Belum ada data Hour meter OFF sebelumnya.'), backgroundColor: Colors.red),
-      );
-    }
+    // Panggil database
+    final val = await GensetDatabase.getHourMeterOffSebelumnya(
+      gedung: _pilihanGedung.replaceAll('_', ' '),
+      tanggal: tanggalSimpan,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _hourMeterOffSebelumnya = val;
+      _isLoadingHourMeter = false;
+    });
   }
 
   // ==========================================
-  // BAGIAN 3: LOGIKA SIMPAN DATA KE SQLITE
+  // BAGIAN 3: LOGIKA SIMPAN DATA
   // ==========================================
   Future<void> _simpanData() async {
     final tanggalSimpan = _pilihanTanggal == 'hari_ini' ? DateTime.now() : _tanggalTerpilih;
     final idFile = 'Genset_${_pilihanGedung}_${DateFormat('yyyy-MM-dd').format(tanggalSimpan)}';
 
-    // Cek duplikasi lewat Database (bukan File JSON lagi)
     final isExist = await GensetDatabase.cekIdExists(idFile);
     if (isExist) {
       if (!mounted) return;
@@ -125,13 +140,11 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
         catatan: _catatanController.text.trim(),
       );
 
-      // Simpan ke SQLite
       await GensetDatabase.simpan(dataBaru);
       
       if (!mounted) return;
       setState(() => _isSaving = false);
 
-      // Generate PDF untuk ditawarkan dibagikan
       final pdfBytes = await PdfGenerator.buatPdf(dataBaru);
       if (!mounted) return;
       _tampilkanDialogBerhasil(dataBaru, pdfBytes);
@@ -143,9 +156,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
     }
   }
 
-  // ==========================================
-  // BAGIAN 4: DIALOG BERHASIL & BAGIKAN PDF + JSON
-  // ==========================================
   void _tampilkanDialogBerhasil(GensetModel dataBaru, Uint8List pdfBytes) {
     showDialog(
       context: context,
@@ -165,7 +175,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
               final tempPdf = File('${tempDir.path}/${dataBaru.id}.pdf');
               await tempPdf.writeAsBytes(pdfBytes);
               
-              // Hanya bagikan PDF saja
               await SharePlus.instance.share(
                 ShareParams(
                   files: [XFile(tempPdf.path)],
@@ -180,9 +189,9 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
       ),
     );
   }
-  
+
   // ==========================================
-  // BAGIAN 5: TAMPILAN UI (BUILD)
+  // BAGIAN 4: TAMPILAN UI (BUILD)
   // ==========================================
   @override
   Widget build(BuildContext context) {
@@ -202,12 +211,18 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                 RadioListTile<String>(
                   title: const Text('Hari Ini', style: TextStyle(fontSize: 14)),
                   value: 'hari_ini', groupValue: _pilihanTanggal, activeColor: const Color(0xFF3F51B5), contentPadding: EdgeInsets.zero, dense: true,
-                  onChanged: (val) => setState(() => _pilihanTanggal = val!),
+                  onChanged: (val) {
+                    setState(() => _pilihanTanggal = val!);
+                    _cekHourMeterSebelumnya(); // Panggil fungsi cek
+                  },
                 ),
                 RadioListTile<String>(
                   title: const Text('Bukan Hari Ini', style: TextStyle(fontSize: 14)),
                   value: 'bukan_hari_ini', groupValue: _pilihanTanggal, activeColor: const Color(0xFF3F51B5), contentPadding: EdgeInsets.zero, dense: true,
-                  onChanged: (val) => setState(() => _pilihanTanggal = val!),
+                  onChanged: (val) {
+                    setState(() => _pilihanTanggal = val!);
+                    _cekHourMeterSebelumnya(); // Panggil fungsi cek
+                  },
                 ),
                 if (_pilihanTanggal == 'bukan_hari_ini')
                   Padding(
@@ -217,7 +232,10 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                         final picked = await showDatePicker(
                           context: context, initialDate: _tanggalTerpilih, firstDate: DateTime(2020), lastDate: DateTime(2030),
                         );
-                        if (picked != null) setState(() => _tanggalTerpilih = picked);
+                        if (picked != null) {
+                          setState(() => _tanggalTerpilih = picked);
+                          _cekHourMeterSebelumnya(); // Panggil fungsi cek
+                        }
                       },
                       icon: const Icon(Icons.calendar_today),
                       label: Text('Tanggal: ${DateFormat('dd/MM/yyyy').format(_tanggalTerpilih)}'),
@@ -243,14 +261,20 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                       child: RadioListTile<String>(
                         title: const Text('Gedung 11', style: TextStyle(fontSize: 14)),
                         value: 'gedung_11', groupValue: _pilihanGedung, activeColor: const Color(0xFF3F51B5), contentPadding: EdgeInsets.zero, dense: true,
-                        onChanged: (val) => setState(() => _pilihanGedung = val!),
+                        onChanged: (val) {
+                          setState(() => _pilihanGedung = val!);
+                          _cekHourMeterSebelumnya(); // Panggil fungsi cek
+                        },
                       ),
                     ),
                     Expanded(
                       child: RadioListTile<String>(
                         title: const Text('Gedung 13', style: TextStyle(fontSize: 14)),
                         value: 'gedung_13', groupValue: _pilihanGedung, activeColor: const Color(0xFF3F51B5), contentPadding: EdgeInsets.zero, dense: true,
-                        onChanged: (val) => setState(() => _pilihanGedung = val!),
+                        onChanged: (val) {
+                          setState(() => _pilihanGedung = val!);
+                          _cekHourMeterSebelumnya(); // Panggil fungsi cek
+                        },
                       ),
                     ),
                   ],
@@ -295,7 +319,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
             isInnerAccordion: true,
             child: Column(
               children: [
-                // Deret input pertama
                 ...['Tegangan Output F/F', 'Tegangan Output F/N', 'Frekuensi', 'Cos Phi', 
                 'Rpm Motor'].map((key) => CustomNumberField(
                   label: key,
@@ -303,32 +326,58 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                   onChanged: (val) => _angkaValues[key] = val,
                 )),
                 
-                // Input Hour meter ON dengan tombol
+                // --- INPUT HOUR METER ON DENGAN CHECKBOX ---
                 CustomNumberField(
                   label: 'Hour meter ON',
                   initialValue: _angkaValues['Hour meter ON'],
-                  onChanged: (val) => _angkaValues['Hour meter ON'] = val,
-                  bottomWidget: TextButton.icon(
-                    onPressed: _ambilHourMeterOffTerakhir,
-                    icon: const Icon(Icons.sync, size: 16),
-                    label: const Text('Ambil dari Hour meter OFF terakhir', style: TextStyle(fontSize: 12)),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF3F51B5),
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(0, 30),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  ),
+                  // Jika dicentang, input tidak bisa diedit (null)
+                  onChanged: _isHourMeterLocked ? null : (val) => _angkaValues['Hour meter ON'] = val,
+                  bottomWidget: _isLoadingHourMeter
+                      ? const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                        )
+                      : Row(
+                          children: [
+                            Checkbox(
+                              value: _isHourMeterLocked,
+                              // Jika data sebelumnya null (tidak ada), checkbox disabled (onChanged: null)
+                              onChanged: _hourMeterOffSebelumnya == null
+                                  ? null
+                                  : (bool? value) {
+                                      setState(() {
+                                        _isHourMeterLocked = value ?? false;
+                                        if (_isHourMeterLocked) {
+                                          // Jika dicentang, isi otomatis
+                                          _angkaValues['Hour meter ON'] = _hourMeterOffSebelumnya!;
+                                        } else {
+                                          // Jika uncheck, kosongkan agar bisa diedit manual
+                                          _angkaValues['Hour meter ON'] = '';
+                                        }
+                                      });
+                                    },
+                            ),
+                            Expanded(
+                              child: Text(
+                                _hourMeterOffSebelumnya == null
+                                    ? 'Tidak ada data OFF sebelumnya'
+                                    : 'Gunakan Hour meter OFF sebelumnya (${_hourMeterOffSebelumnya})',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: _hourMeterOffSebelumnya == null ? Colors.grey : Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
 
-                // Input Hour meter OFF
                 CustomNumberField(
                   label: 'Hour meter OFF',
                   initialValue: _angkaValues['Hour meter OFF'],
                   onChanged: (val) => _angkaValues['Hour meter OFF'] = val,
                 ),
                 
-                // Deret input Temperatur
                 ...['Temperatur Mesin', 'Temperatur Air Cooler', 'Temperatur Oli']
                 .map((key) => CustomNumberField(
                   label: key, 
@@ -339,7 +388,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
             ),
           ),
 
-          // --- SECTION PELAKSANA & CATATAN (File Terpisah) ---
+          // --- SECTION PELAKSANA & CATATAN ---
           GensetPelaksanaSection(
             pelaksanaControllers: _pelaksanaControllers,
             koordinatorController: _koordinatorController,

@@ -223,6 +223,34 @@ class GensetDatabase {
   }
 
   // ==========================================
+  // FUNGSI AMBIL HOUR METER OFF BERDASARKAN GEDUNG & TANGGAL
+  // ==========================================
+  static Future<String?> getHourMeterOffSebelumnya({
+    required String gedung,
+    required DateTime tanggal,
+  }) async {
+    final db = await database;
+    
+    // Query mencari data di gedung yang sama, 
+    // dengan tanggal LEBIH KECIL dari tanggal yang diinput
+    final result = await db.query(
+      'genset_pengujian',
+      where: 'gedung = ? AND tanggal < ?',
+      whereArgs: [gedung, tanggal.toIso8601String()],
+      orderBy: 'tanggal DESC',
+      limit: 1,
+    );
+
+    if (result.isNotEmpty) {
+      final hourOff = result.first['hour_off'];
+      if (hourOff != null && hourOff.toString().trim().isNotEmpty && hourOff != '-') {
+        return hourOff.toString();
+      }
+    }
+    return null;
+  }
+
+  // ==========================================
   // EKSPOR DATABASE (TABEL BARU)
   // ==========================================
   static Future<File?> eksporDatabase({
