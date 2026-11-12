@@ -261,10 +261,11 @@ class GensetDatabase {
     }
 
     final List<Map<String, dynamic>> maps = await db.rawQuery(
-      'SELECT * FROM genset_pengujian $whereClause',
+      // Menambahkan ORDER BY tanggal agar urut berdasarkan tanggal pengujian
+      'SELECT * FROM genset_pengujian $whereClause ORDER BY tanggal ASC',
       whereArgs,
     );
-
+    
     if (maps.isEmpty) return null;
 
     final tempDir = await getTemporaryDirectory();
