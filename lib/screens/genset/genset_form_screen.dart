@@ -22,8 +22,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   // ==========================================
   // BAGIAN 1: STATE / VARIABEL DATA FORM
   // ==========================================
-  String _pilihanTanggal = 'hari_ini';
-  DateTime _tanggalTerpilih = DateTime.now();
+  DateTime _tanggalTerpilih = DateTime.now(); // Langsung set ke hari ini
   String _pilihanGedung = 'gedung_11';
   String? _expandedForm;
 
@@ -36,7 +35,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
     'Level Air Accu': 'baik',
   };
 
-  // Map untuk menyimpan nilai angka
   final Map<String, String> _angkaValues = {
     'Battery Charger': '', 
     'Tegangan Battery': '',
@@ -46,7 +44,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
     'Temperatur Mesin': '', 'Temperatur Air Cooler': '', 'Temperatur Oli': '',
   };
 
-  // Map untuk menyimpan TextEditingController semua input angka
   final Map<String, TextEditingController> _angkaControllers = {};
 
   final List<TextEditingController> _pelaksanaControllers = List.generate(4, (index) => TextEditingController());
@@ -55,7 +52,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
 
   bool _isSaving = false;
   
-  // State untuk Checkbox Hour meter
   bool _isHourMeterLocked = false;
   String? _hourMeterOffSebelumnya;
   bool _isLoadingHourMeter = false;
@@ -64,19 +60,17 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   void initState() {
     super.initState();
     
-    // Inisialisasi semua controller input angka
     for (var key in _angkaValues.keys) {
       _angkaControllers[key] = TextEditingController(text: _angkaValues[key]);
     }
 
-    // Panggil cek data sebelumnya setelah form dimuat
     WidgetsBinding.instance.addPostFrameCallback((_) => _cekHourMeterSebelumnya());
   }
 
   @override
   void dispose() {
     for (var c in _pelaksanaControllers) { c.dispose(); }
-    for (var c in _angkaControllers.values) { c.dispose(); } // Dispose semua controller angka
+    for (var c in _angkaControllers.values) { c.dispose(); }
     _koordinatorController.dispose();
     _catatanController.dispose();
     super.dispose();
@@ -90,19 +84,17 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   // BAGIAN 2: FUNGSI CEK HOUR METER SEBELUMNYA
   // ==========================================
   Future<void> _cekHourMeterSebelumnya() async {
-    final tanggalSimpan = _pilihanTanggal == 'hari_ini' ? DateTime.now() : _tanggalTerpilih;
-    
     setState(() {
       _isLoadingHourMeter = true;
       _isHourMeterLocked = false; 
       _hourMeterOffSebelumnya = null;
       _angkaValues['Hour meter ON'] = '';
-      _angkaControllers['Hour meter ON']?.clear(); // Kosongkan input
+      _angkaControllers['Hour meter ON']?.clear();
     });
 
     final val = await GensetDatabase.getHourMeterOffSebelumnya(
       gedung: _pilihanGedung.replaceAll('_', ' '),
-      tanggal: tanggalSimpan,
+      tanggal: _tanggalTerpilih,
     );
 
     if (!mounted) return;
@@ -116,8 +108,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   // BAGIAN 3: LOGIKA SIMPAN DATA
   // ==========================================
   Future<void> _simpanData() async {
-    final tanggalSimpan = _pilihanTanggal == 'hari_ini' ? DateTime.now() : _tanggalTerpilih;
-    final idFile = 'Genset_${_pilihanGedung}_${DateFormat('yyyy-MM-dd').format(tanggalSimpan)}';
+    final idFile = 'Genset_${_pilihanGedung}_${DateFormat('yyyy-MM-dd').format(_tanggalTerpilih)}';
 
     final isExist = await GensetDatabase.cekIdExists(idFile);
     if (isExist) {
@@ -126,7 +117,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Gagal Menyimpan'),
-          content: Text('Data untuk ${_pilihanGedung.replaceAll('_', ' ')} pada tanggal ${DateFormat('dd/MM/yyyy').format(tanggalSimpan)} sudah ada.'),
+          content: Text('Data untuk ${_pilihanGedung.replaceAll('_', ' ')} pada tanggal ${DateFormat('dd/MM/yyyy').format(_tanggalTerpilih)} sudah ada.'),
           actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
         ),
       );
@@ -142,7 +133,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
 
       final dataBaru = GensetModel(
         id: idFile,
-        tanggal: tanggalSimpan,
+        tanggal: _tanggalTerpilih,
         gedung: _pilihanGedung.replaceAll('_', ' '),
         radioSebelum: _radioValues,
         angkaSaat: _angkaValues,
@@ -210,7 +201,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // --- SECTION TANGGAL ---
+          // --- SECTION TANGGAL (DIUBAH) ---
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
@@ -218,39 +209,35 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('PILIH TANGGAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey)),
-                RadioListTile<String>(
-                  title: const Text('Hari Ini', style: TextStyle(fontSize: 14)),
-                  value: 'hari_ini', groupValue: _pilihanTanggal, activeColor: const Color(0xFF3F51B5), contentPadding: EdgeInsets.zero, dense: true,
-                  onChanged: (val) {
-                    setState(() => _pilihanTanggal = val!);
-                    _cekHourMeterSebelumnya();
-                  },
-                ),
-                RadioListTile<String>(
-                  title: const Text('Bukan Hari Ini', style: TextStyle(fontSize: 14)),
-                  value: 'bukan_hari_ini', groupValue: _pilihanTanggal, activeColor: const Color(0xFF3F51B5), contentPadding: EdgeInsets.zero, dense: true,
-                  onChanged: (val) {
-                    setState(() => _pilihanTanggal = val!);
-                    _cekHourMeterSebelumnya();
-                  },
-                ),
-                if (_pilihanTanggal == 'bukan_hari_ini')
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8, left: 16),
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context, initialDate: _tanggalTerpilih, firstDate: DateTime(2020), lastDate: DateTime(2030),
-                        );
-                        if (picked != null) {
-                          setState(() => _tanggalTerpilih = picked);
-                          _cekHourMeterSebelumnya();
-                        }
-                      },
-                      icon: const Icon(Icons.calendar_today),
-                      label: Text('Tanggal: ${DateFormat('dd/MM/yyyy').format(_tanggalTerpilih)}'),
+                const SizedBox(height: 8),
+                // Tombol Langsung Buka Kalender
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context, 
+                        initialDate: _tanggalTerpilih, 
+                        firstDate: DateTime(2020), 
+                        lastDate: DateTime(2030),
+                      );
+                      if (picked != null) {
+                        setState(() => _tanggalTerpilih = picked);
+                        _cekHourMeterSebelumnya();
+                      }
+                    },
+                    icon: const Icon(Icons.calendar_today),
+                    label: Text(
+                      'Tanggal: ${DateFormat('dd/MM/yyyy').format(_tanggalTerpilih)}',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      foregroundColor: const Color(0xFF3F51B5),
+                      side: const BorderSide(color: Color(0xFF3F51B5)),
                     ),
                   ),
+                ),
               ],
             ),
           ),
