@@ -201,18 +201,22 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // --- SECTION TANGGAL (DIUBAH) ---
+
+          // --- SECTION TANGGAL (UKURAN DISESUAIKAN) ---
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(
+              color: Colors.white, 
+              border: Border.all(color: Colors.grey[300]!), 
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('PILIH TANGGAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey)),
                 const SizedBox(height: 8),
-                // Tombol Langsung Buka Kalender
-                SizedBox(
-                  width: double.infinity,
+                Align(
+                  alignment: Alignment.centerLeft,
                   child: OutlinedButton.icon(
                     onPressed: () async {
                       final picked = await showDatePicker(
@@ -226,22 +230,23 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                         _cekHourMeterSebelumnya();
                       }
                     },
-                    icon: const Icon(Icons.calendar_today),
+                    icon: const Icon(Icons.calendar_today, size: 18),
                     label: Text(
-                      'Tanggal: ${DateFormat('dd/MM/yyyy').format(_tanggalTerpilih)}',
+                      // Menampilkan Hari, Tanggal/Bulan/Tahun
+                      DateFormat('EEEE, dd/MM/yyyy', 'id_ID').format(_tanggalTerpilih),
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       foregroundColor: const Color(0xFF3F51B5),
                       side: const BorderSide(color: Color(0xFF3F51B5)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
 
           // --- SECTION GEDUNG ---
           Container(
