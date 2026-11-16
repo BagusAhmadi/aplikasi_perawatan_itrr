@@ -350,6 +350,9 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
     );
   }
 
+  // ==========================================
+  // GRID KALENDER (UKURAN TETAP & ANTI MELAR)
+  // ==========================================
   Widget _buildCalendarGrid() {
     final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final lastDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
@@ -360,7 +363,7 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
     List<Widget> dayWidgets = [];
 
     for (int i = 1; i < firstWeekday; i++) {
-      dayWidgets.add(const SizedBox(width: 36, height: 36));
+      dayWidgets.add(const SizedBox(width: 44, height: 44));
     }
 
     for (int i = 1; i <= totalDays; i++) {
@@ -375,8 +378,8 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
         GestureDetector(
           onTap: () => setState(() => _selectedDate = date),
           child: Container(
-            width: 36,
-            height: 36,
+            width: 40, // Ukuran kotak tanggal dikunci
+            height: 40,
             margin: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               color: isSelected 
@@ -403,11 +406,17 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
       );
     }
 
-    return Wrap(
-      alignment: WrapAlignment.start,
-      spacing: 2,
-      runSpacing: 2,
-      children: dayWidgets,
+    // Membatasi lebar maksimal kalender agar tetap rapi di tablet/desktop
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 320), 
+        child: Wrap(
+          alignment: WrapAlignment.start,
+          spacing: 4,
+          runSpacing: 4,
+          children: dayWidgets,
+        ),
+      ),
     );
   }
 
