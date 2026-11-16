@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'genset_form_screen.dart';
-import 'genset_riwayat_screen.dart'; // Import file baru
-import '../home_screen.dart';
+import 'genset_riwayat_screen.dart';
 
 class GensetLayout extends StatefulWidget {
   const GensetLayout({super.key});
@@ -49,7 +48,7 @@ class _GensetLayoutState extends State<GensetLayout> {
               color: Colors.grey[100],
               child: _selectedIndex == 0
                   ? const GensetFormScreen()
-                  : const GensetRiwayatScreen(), // Panggil file baru di sini
+                  : const GensetRiwayatScreen(),
             ),
           ),
         ],
@@ -81,13 +80,8 @@ class _GensetLayoutState extends State<GensetLayout> {
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
-              _buildMenuItem(
-                icon: Icons.arrow_back, title: 'Kembali ke Menu Awal', isActive: false, isDesktop: isDesktop,
-                onTap: () {
-                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
-                },
-              ),
-              const Divider(),
+              // Menu "Kembali ke Menu Awal" sudah DIHAPUS dari sini
+              
               _buildMenuItem(
                 icon: Icons.assignment, title: 'Pengisian', isActive: _selectedIndex == 0, isDesktop: isDesktop,
                 onTap: () {
