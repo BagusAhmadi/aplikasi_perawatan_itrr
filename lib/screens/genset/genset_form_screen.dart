@@ -1,12 +1,11 @@
-import 'package:pdf/pdf.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:printing/printing.dart';
 import '../../widgets/form_inputs.dart';
 import 'genset_model.dart';
 import 'genset_database.dart';
 import 'pdf_generator.dart';
 import 'genset_pelaksana_section.dart';
+import 'pdf_preview_screen.dart'; // Import halaman pratinjau PDF
 
 class GensetFormScreen extends StatefulWidget {
   const GensetFormScreen({super.key});
@@ -77,7 +76,33 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   }
 
   // ==========================================
-  // BAGIAN 2: VALIDASI FORM
+  // BAGIAN 2: FUNGSI RESET FORM
+  // ==========================================
+  void _resetForm() {
+    setState(() {
+      _tanggalTerpilih = DateTime.now();
+      _pilihanGedung = 'gedung_11';
+      
+      _radioValues.updateAll((key, value) => 'baik');
+      
+      for (var key in _angkaValues.keys) {
+        _angkaValues[key] = '';
+        _angkaControllers[key]?.clear();
+      }
+
+      for (var c in _pelaksanaControllers) { c.clear(); }
+      _koordinatorController.clear();
+      _catatanController.clear();
+
+      _isFormValid = false; // Kembalikan tombol simpan ke disabled
+    });
+    
+    // Cek ulang hour meter untuk tanggal dan gedung default
+    _cekHourMeterSebelumnya(); 
+  }
+
+  // ==========================================
+  // BAGIAN 3: VALIDASI FORM
   // ==========================================
   void _cekValidasi() {
     // Cek apakah semua form input angka sudah terisi
@@ -101,7 +126,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   }
 
   // ==========================================
-  // BAGIAN 3: FUNGSI CEK HOUR METER SEBELUMNYA
+  // BAGIAN 4: FUNGSI CEK HOUR METER SEBELUMNYA
   // ==========================================
   Future<void> _cekHourMeterSebelumnya() async {
     setState(() {
@@ -126,7 +151,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   }
 
   // ==========================================
-  // BAGIAN 4: LOGIKA SIMPAN DATA & PRINT PREVIEW
+  // BAGIAN 5: LOGIKA SIMPAN DATA & BUKA PREVIEW
   // ==========================================
   Future<void> _simpanData() async {
     final idFile = 'Genset_${_pilihanGedung}_${DateFormat('yyyy-MM-dd').format(_tanggalTerpilih)}';
@@ -172,16 +197,21 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
       final pdfBytes = await PdfGenerator.buatPdf(dataBaru);
       if (!mounted) return;
 
-      // 3. Buka Print Preview
-      await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) async => pdfBytes,
-        name: 'Laporan_${dataBaru.id}.pdf',
+      // 3. Buka Halaman Pratinjau PDF (PdfPreviewScreen)
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PdfPreviewScreen(
+            pdfBytes: pdfBytes,
+            fileName: 'Laporan_${dataBaru.id}.pdf',
+          ),
+        ),
       );
 
-      // Setelah preview ditutup, reset validasi
-      setState(() {
-        _isFormValid = false;
-      });
+      // 4. Setelah halaman pratinjau ditutup, reset form
+      if (mounted) {
+        _resetForm();
+      }
 
     } catch (e) {
       setState(() => _isSaving = false);
@@ -191,7 +221,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   }
 
   // ==========================================
-  // BAGIAN 5: TAMPILAN UI (BUILD)
+  // BAGIAN 6: TAMPILAN UI (BUILD)
   // ==========================================
   @override
   Widget build(BuildContext context) {
