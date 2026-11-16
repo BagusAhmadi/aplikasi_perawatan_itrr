@@ -1,15 +1,8 @@
-import 'dart:typed_data';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 import 'genset_model.dart';
-import 'genset_database.dart';
-import 'pdf_generator.dart';
+import 'genset_riwayat_logic.dart'; // Import file logika
 
-// ==========================================
-// HALAMAN RIWAYAT (KALENDER & EKSPOR)
-// ==========================================
 class GensetRiwayatScreen extends StatefulWidget {
   const GensetRiwayatScreen({super.key});
 
@@ -34,215 +27,22 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final data = await GensetDatabase.bacaSemua();
+    final data = await GensetRiwayatLogic.loadData(); // Panggil dari Logic
     setState(() {
       _data = data;
       _isLoading = false;
     });
   }
 
-  // --- FUNGSI CETAK PDF ---
-  Future<void> _buatDanSimpanPdf(GensetModel item) async {
-    setState(() => _isProcessingPdf = true);
-    try {
-      final Uint8List pdfBytes = await PdfGenerator.buatPdf(item);
-      
-      final Uri? outputUri = await FilePicker.saveFile(
-        dialogTitle: 'Simpan PDF ke...',
-        fileName: '${item.id}.pdf',
-        bytes: pdfBytes,
-        mimeType: 'application/pdf',
-      );
-
-      if (!mounted) return;
-      setState(() => _isProcessingPdf = false);
-
-      if (outputUri != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PDF berhasil disimpan: $outputUri')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Penyimpanan dibatalkan')),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isProcessingPdf = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mencetak PDF: $e'), backgroundColor: Colors.red),
-      );
-    }
+  void _hapusData(GensetModel item) async {
+    final berhasil = await GensetRiwayatLogic.konfirmasiHapus(context, item); // Panggil dari Logic
+    if (berhasil) _loadData();
   }
 
-  // --- FUNGSI HAPUS DATA ---
-  Future<void> _hapusData(GensetModel item) async {
-    final konfirmasi = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Data?'),
-        content: Text('Data pengujian ${item.gedung} tanggal ${DateFormat('dd/MM/yyyy').format(item.tanggal)} akan dihapus permanen.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true), 
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (konfirmasi == true) {
-      await GensetDatabase.hapus(item.id);
-      _loadData(); 
-    }
-  }
-
-  // ==========================================
-  // ALUR EKSPOR DATABASE
-  // ==========================================
-  Future<void> _eksporDatabaseSaja() async {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text('Pilih Waktu Ekspor', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.all_inbox),
-                  title: const Text('Semua Data'),
-                  onTap: () { Navigator.pop(ctx); _pilihGedungEkspor(); },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.calendar_month),
-                  title: const Text('Per Bulan'),
-                  onTap: () async {
-                    Navigator.pop(ctx); 
-                    final picked = await showDatePicker(
-                      context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030),
-                      helpText: 'Pilih Bulan (Tanggal tidak penting)',
-                    );
-                    if (picked != null) _pilihGedungEkspor(bulan: picked.month, tahun: picked.year);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.calendar_today),
-                  title: const Text('Per Hari'),
-                  onTap: () async {
-                    Navigator.pop(ctx); 
-                    final picked = await showDatePicker(
-                      context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030),
-                    );
-                    if (picked != null) _pilihGedungEkspor(tanggal: picked);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _pilihGedungEkspor({DateTime? tanggal, int? bulan, int? tahun}) async {
-    bool pilihGedung11 = true;
-    bool pilihGedung13 = true;
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: const Text('Pilih Gedung'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CheckboxListTile(
-                    title: const Text('Gedung 11'),
-                    value: pilihGedung11,
-                    onChanged: (val) => setStateDialog(() => pilihGedung11 = val!),
-                  ),
-                  CheckboxListTile(
-                    title: const Text('Gedung 13'),
-                    value: pilihGedung13,
-                    onChanged: (val) => setStateDialog(() => pilihGedung13 = val!),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx), 
-                  child: const Text('Batal')
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    List<String> gedungTerpilih = [];
-                    if (pilihGedung11) gedungTerpilih.add('gedung 11');
-                    if (pilihGedung13) gedungTerpilih.add('gedung 13');
-
-                    if (gedungTerpilih.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Pilih minimal satu gedung!'), backgroundColor: Colors.red),
-                      );
-                      return;
-                    }
-
-                    Navigator.pop(ctx);
-                    _prosesEkspor(
-                      tanggal: tanggal,
-                      bulan: bulan,
-                      tahun: tahun,
-                      gedungList: gedungTerpilih,
-                    );
-                  },
-                  child: const Text('Ekspor'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _prosesEkspor({
-    DateTime? tanggal, 
-    int? bulan, 
-    int? tahun, 
-    required List<String> gedungList,
-  }) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Menyiapkan file database...')),
-    );
-
-    final file = await GensetDatabase.eksporDatabase(
-      filterTanggal: tanggal,
-      filterBulan: bulan,
-      filterTahun: tahun,
-      filterGedungList: gedungList,
-    );
-
-    if (file != null) {
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(file.path)],
-          text: 'Backup Database Genset',
-        ),
-      );
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tidak ada data yang sesuai filter untuk diekspor.'), backgroundColor: Colors.red),
-      );
-    }
+  void _cetakPdf(GensetModel item) {
+    GensetRiwayatLogic.buatDanSimpanPdf(context, item, (loading) {
+      setState(() => _isProcessingPdf = loading);
+    });
   }
 
   // ==========================================
@@ -277,7 +77,7 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: ElevatedButton.icon(
-              onPressed: _eksporDatabaseSaja,
+              onPressed: () => GensetRiwayatLogic.mulaiEksporDatabase(context, _loadData), // Panggil dari Logic
               icon: const Icon(Icons.save_alt),
               label: const Text('Ekspor Database'),
               style: ElevatedButton.styleFrom(
@@ -288,9 +88,7 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ==========================================
           // KOTAK KALENDER
-          // ==========================================
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -300,7 +98,6 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
             ),
             child: Column(
               children: [
-                // Header Bulan & Tombol Navigasi
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -320,21 +117,15 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
                 ),
                 const SizedBox(height: 8),
                 
-                // Baris Nama Hari
                 Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 320),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((day) => 
-                        // Lebar 44 disamakan dengan kotak tanggal
                         SizedBox(
                           width: 44, 
-                          child: Text(
-                            day, 
-                            textAlign: TextAlign.center, 
-                            style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)
-                          )
+                          child: Text(day, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold))
                         )
                       ).toList(),
                     ),
@@ -342,8 +133,6 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
                 ),
                 
                 const Divider(),
-                
-                // Grid Tanggal
                 _buildCalendarGrid(),
               ],
             ),
@@ -351,9 +140,6 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
           
           const SizedBox(height: 24),
 
-          // ==========================================
-          // DAFTAR RIWAYAT DI BAWAH KALENDER
-          // ==========================================
           if (_selectedDate != null) ...[
             Text(
               'Tanggal Terpilih: ${DateFormat('dd MMMM yyyy', 'id_ID').format(_selectedDate!)}',
@@ -387,12 +173,10 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
     
     List<Widget> dayWidgets = [];
 
-    // Kotak kosong sebelum tanggal 1
     for (int i = 1; i < firstWeekday; i++) {
       dayWidgets.add(const SizedBox(width: 44, height: 44));
     }
 
-    // Isi Tanggal
     for (int i = 1; i <= totalDays; i++) {
       final date = DateTime(_currentMonth.year, _currentMonth.month, i);
       final hasData = _hasDataOnDate(date);
@@ -403,13 +187,13 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
 
       dayWidgets.add(
         Container(
-          width: 44, // Disamakan dengan lebar nama hari
+          width: 44, 
           height: 44, 
           alignment: Alignment.center,
           child: GestureDetector(
             onTap: () => setState(() => _selectedDate = date),
             child: Container(
-              width: 36, // Ukuran kotak tanggal di dalamnya
+              width: 36, 
               height: 36,
               decoration: BoxDecoration(
                 color: isSelected 
@@ -437,10 +221,9 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
       );
     }
 
-    // Bungkus dengan Center & ConstrainedBox agar tidak melar
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 308), // 44 * 7 hari = 308
+        constraints: const BoxConstraints(maxWidth: 308), 
         child: Wrap(
           alignment: WrapAlignment.start,
           children: dayWidgets,
@@ -482,7 +265,7 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
-                  onPressed: _isProcessingPdf ? null : () => _buatDanSimpanPdf(item),
+                  onPressed: _isProcessingPdf ? null : () => _cetakPdf(item),
                   icon: _isProcessingPdf 
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.print, size: 18),
