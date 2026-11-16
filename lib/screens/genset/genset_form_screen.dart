@@ -1,9 +1,7 @@
-import 'dart:io';
-import 'dart:typed_data';
+import 'package:pdf/pdf.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:printing/printing.dart';
 import '../../widgets/form_inputs.dart';
 import 'genset_model.dart';
 import 'genset_database.dart';
@@ -44,6 +42,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
 
   final Map<String, TextEditingController> _angkaControllers = {};
 
+  // Controller untuk Pelaksana (Catatan tidak masuk validasi)
   final List<TextEditingController> _pelaksanaControllers = List.generate(4, (index) => TextEditingController());
   final TextEditingController _koordinatorController = TextEditingController();
   final TextEditingController _catatanController = TextEditingController();
@@ -53,6 +52,9 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   bool _isHourMeterLocked = false;
   String? _hourMeterOffSebelumnya;
   bool _isLoadingHourMeter = false;
+
+  // State tambahan untuk memicu validasi tombol simpan
+  bool _isFormValid = false; 
 
   @override
   void initState() {
@@ -75,7 +77,31 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   }
 
   // ==========================================
-  // BAGIAN 2: FUNGSI CEK HOUR METER SEBELUMNYA
+  // BAGIAN 2: VALIDASI FORM
+  // ==========================================
+  void _cekValidasi() {
+    // Cek apakah semua form input angka sudah terisi
+    bool allAngkaValid = _angkaValues.values.every((val) => val.trim().isNotEmpty);
+    
+    // Cek apakah minimal 1 pelaksana yang diisi
+    bool adaPelaksana = _pelaksanaControllers.any((c) => c.text.trim().isNotEmpty);
+    
+    // Cek apakah koordinator sudah diisi
+    bool adaKoordinator = _koordinatorController.text.trim().isNotEmpty;
+
+    // Gabungkan hasil validasi
+    bool isValid = allAngkaValid && adaPelaksana && adaKoordinator;
+
+    // Jika status validasi berubah, perbarui UI
+    if (_isFormValid != isValid) {
+      setState(() {
+        _isFormValid = isValid;
+      });
+    }
+  }
+
+  // ==========================================
+  // BAGIAN 3: FUNGSI CEK HOUR METER SEBELUMNYA
   // ==========================================
   Future<void> _cekHourMeterSebelumnya() async {
     setState(() {
@@ -96,10 +122,11 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
       _hourMeterOffSebelumnya = val;
       _isLoadingHourMeter = false;
     });
+    _cekValidasi(); // Cek validasi setiap kali data hour meter berubah
   }
 
   // ==========================================
-  // BAGIAN 3: LOGIKA SIMPAN DATA
+  // BAGIAN 4: LOGIKA SIMPAN DATA & PRINT PREVIEW
   // ==========================================
   Future<void> _simpanData() async {
     final idFile = 'Genset_${_pilihanGedung}_${DateFormat('yyyy-MM-dd').format(_tanggalTerpilih)}';
@@ -135,14 +162,26 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
         catatan: _catatanController.text.trim(),
       );
 
+      // 1. Simpan ke SQLite
       await GensetDatabase.simpan(dataBaru);
       
       if (!mounted) return;
       setState(() => _isSaving = false);
 
+      // 2. Generate PDF
       final pdfBytes = await PdfGenerator.buatPdf(dataBaru);
       if (!mounted) return;
-      _tampilkanDialogBerhasil(dataBaru, pdfBytes);
+
+      // 3. Buka Print Preview
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdfBytes,
+        name: 'Laporan_${dataBaru.id}.pdf',
+      );
+
+      // Setelah preview ditutup, reset validasi
+      setState(() {
+        _isFormValid = false;
+      });
 
     } catch (e) {
       setState(() => _isSaving = false);
@@ -151,42 +190,8 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
     }
   }
 
-  void _tampilkanDialogBerhasil(GensetModel dataBaru, Uint8List pdfBytes) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Berhasil Disimpan'),
-        content: const Text('Data berhasil disimpan. Bagikan file PDF sekarang?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Tidak'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final tempDir = await getTemporaryDirectory();
-              final tempPdf = File('${tempDir.path}/${dataBaru.id}.pdf');
-              await tempPdf.writeAsBytes(pdfBytes);
-              
-              await SharePlus.instance.share(
-                ShareParams(
-                  files: [XFile(tempPdf.path)],
-                  text: 'Laporan Genset (PDF)',
-                ),
-              );
-            },
-            icon: const Icon(Icons.share),
-            label: const Text('Ya, Bagikan'),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ==========================================
-  // BAGIAN 4: TAMPILAN UI (BUILD)
+  // BAGIAN 5: TAMPILAN UI (BUILD)
   // ==========================================
   @override
   Widget build(BuildContext context) {
@@ -275,19 +280,14 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ==========================================
-          // ACCORDION SEBELUM RUNNING (SEKARANG JADI CONTAINER BIASA)
-          // ==========================================
+          // --- SECTION SEBELUM RUNNING ---
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'PEMERIKSAAN SEBELUM RUNNING TEST GENSET',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF3F51B5)),
-                ),
+                const Text('PEMERIKSAAN SEBELUM RUNNING TEST GENSET', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF3F51B5))),
                 const Divider(),
                 const SizedBox(height: 8),
                 
@@ -299,31 +299,32 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                 CustomNumberField(
                   label: 'Battery Charger',
                   controller: _angkaControllers['Battery Charger'],
-                  onChanged: (val) => _angkaValues['Battery Charger'] = val,
+                  onChanged: (val) {
+                    _angkaValues['Battery Charger'] = val;
+                    _cekValidasi();
+                  },
                 ),
                 CustomNumberField(
                   label: 'Tegangan Battery',
                   controller: _angkaControllers['Tegangan Battery'],
-                  onChanged: (val) => _angkaValues['Tegangan Battery'] = val,
+                  onChanged: (val) {
+                    _angkaValues['Tegangan Battery'] = val;
+                    _cekValidasi();
+                  },
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
 
-          // ==========================================
-          // ACCORDION SAAT RUNNING (SEKARANG JADI CONTAINER BIASA)
-          // ==========================================
+          // --- SECTION SAAT RUNNING ---
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'PEMERIKSAAN SAAT RUNNING TEST GENSET',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF3F51B5)),
-                ),
+                const Text('PEMERIKSAAN SAAT RUNNING TEST GENSET', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF3F51B5))),
                 const Divider(),
                 const SizedBox(height: 8),
 
@@ -331,21 +332,22 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                 'Rpm Motor'].map((key) => CustomNumberField(
                   label: key,
                   controller: _angkaControllers[key],
-                  onChanged: (val) => _angkaValues[key] = val,
+                  onChanged: (val) {
+                    _angkaValues[key] = val;
+                    _cekValidasi();
+                  },
                 )),
                 
-                // --- INPUT HOUR METER ON DENGAN CHECKBOX ---
+                // HOUR METER ON
                 CustomNumberField(
                   label: 'Hour meter ON',
                   controller: _angkaControllers['Hour meter ON'],
                   onChanged: _isHourMeterLocked ? null : (val) {
                     _angkaValues['Hour meter ON'] = val;
+                    _cekValidasi();
                   },
                   bottomWidget: _isLoadingHourMeter
-                      ? const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                        )
+                      ? const Padding(padding: EdgeInsets.all(8.0), child: SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2)))
                       : Row(
                           children: [
                             Checkbox(
@@ -363,17 +365,13 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                                           _angkaControllers['Hour meter ON']?.clear();
                                         }
                                       });
+                                      _cekValidasi();
                                     },
                             ),
                             Expanded(
                               child: Text(
-                                _hourMeterOffSebelumnya == null
-                                    ? 'Tidak ada data OFF sebelumnya'
-                                    : 'Gunakan Hour meter OFF sebelumnya (${_hourMeterOffSebelumnya})',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: _hourMeterOffSebelumnya == null ? Colors.grey : Colors.black87,
-                                ),
+                                _hourMeterOffSebelumnya == null ? 'Tidak ada data OFF sebelumnya' : 'Gunakan Hour meter OFF sebelumnya (${_hourMeterOffSebelumnya})',
+                                style: TextStyle(fontSize: 12, color: _hourMeterOffSebelumnya == null ? Colors.grey : Colors.black87),
                               ),
                             ),
                           ],
@@ -383,14 +381,20 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                 CustomNumberField(
                   label: 'Hour meter OFF',
                   controller: _angkaControllers['Hour meter OFF'],
-                  onChanged: (val) => _angkaValues['Hour meter OFF'] = val,
+                  onChanged: (val) {
+                    _angkaValues['Hour meter OFF'] = val;
+                    _cekValidasi();
+                  },
                 ),
                 
                 ...['Temperatur Mesin', 'Temperatur Air Cooler', 'Temperatur Oli']
                 .map((key) => CustomNumberField(
                   label: key, 
                   controller: _angkaControllers[key],
-                  onChanged: (val) => _angkaValues[key] = val,
+                  onChanged: (val) {
+                    _angkaValues[key] = val;
+                    _cekValidasi();
+                  },
                 )).toList(),
               ],
             ),
@@ -401,18 +405,21 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
             pelaksanaControllers: _pelaksanaControllers,
             koordinatorController: _koordinatorController,
             catatanController: _catatanController,
+            onTextChanged: _cekValidasi, // Memanggil validasi saat mengetik
           ),
 
           // --- TOMBOL SIMPAN ---
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: _isSaving ? null : _simpanData,
+            // Tombol hanya bisa diklik jika _isFormValid bernilai true dan tidak sedang menyimpan
+            onPressed: (_isFormValid && !_isSaving) ? _simpanData : null,
             icon: _isSaving
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.save),
             label: Text(_isSaving ? 'Menyimpan...' : 'Simpan ke Riwayat'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF3F51B5),
+              disabledBackgroundColor: Colors.grey[400],
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

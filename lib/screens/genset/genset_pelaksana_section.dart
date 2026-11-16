@@ -7,12 +7,14 @@ class GensetPelaksanaSection extends StatelessWidget {
   final List<TextEditingController> pelaksanaControllers;
   final TextEditingController koordinatorController;
   final TextEditingController catatanController;
+  final VoidCallback onTextChanged; // Callback untuk memicu validasi
 
   const GensetPelaksanaSection({
     super.key,
     required this.pelaksanaControllers,
     required this.koordinatorController,
     required this.catatanController,
+    required this.onTextChanged,
   });
 
   @override
@@ -30,9 +32,10 @@ class GensetPelaksanaSection extends StatelessWidget {
         children: [
           const Text(
             'PELAKSANA & CATATAN',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF3F51B5)),
           ),
-          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 8),
           
           // Loop untuk 4 Pelaksana
           for (int i = 0; i < 4; i++)
@@ -49,7 +52,7 @@ class GensetPelaksanaSection extends StatelessWidget {
             koordinatorController,
           ),
           
-          // Catatan
+          // Catatan (Tidak mempengaruhi validasi)
           const Text('Catatan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
           const SizedBox(height: 8),
           TextField(
@@ -78,6 +81,8 @@ class GensetPelaksanaSection extends StatelessWidget {
           const SizedBox(height: 8),
           TextField(
             controller: controller,
+            // Memanggil callback onTextChanged setiap kali ada ketikan baru
+            onChanged: (val) => onTextChanged(), 
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
