@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../widgets/accordion_section.dart';
 import '../../widgets/form_inputs.dart';
 import 'genset_model.dart';
 import 'genset_database.dart';
@@ -22,9 +21,8 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   // ==========================================
   // BAGIAN 1: STATE / VARIABEL DATA FORM
   // ==========================================
-  DateTime _tanggalTerpilih = DateTime.now(); // Langsung set ke hari ini
+  DateTime _tanggalTerpilih = DateTime.now();
   String _pilihanGedung = 'gedung_11';
-  String? _expandedForm;
 
   final Map<String, String> _radioValues = {
     'Level Oli Mesin': 'baik',
@@ -74,10 +72,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
     _koordinatorController.dispose();
     _catatanController.dispose();
     super.dispose();
-  }
-
-  void _toggleForm(String id) {
-    setState(() => _expandedForm = _expandedForm == id ? null : id);
   }
 
   // ==========================================
@@ -201,15 +195,10 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-
-          // --- SECTION TANGGAL (UKURAN DISESUAIKAN) ---
+          // --- SECTION TANGGAL ---
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white, 
-              border: Border.all(color: Colors.grey[300]!), 
-              borderRadius: BorderRadius.circular(8),
-            ),
+            decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -232,7 +221,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                     },
                     icon: const Icon(Icons.calendar_today, size: 18),
                     label: Text(
-                      // Menampilkan Hari, Tanggal/Bulan/Tahun
                       DateFormat('EEEE, dd/MM/yyyy', 'id_ID').format(_tanggalTerpilih),
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
@@ -247,6 +235,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 16),
 
           // --- SECTION GEDUNG ---
           Container(
@@ -286,14 +275,22 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
           ),
           const SizedBox(height: 16),
 
-          // --- ACCORDION SEBELUM RUNNING ---
-          AccordionSection(
-            title: 'Pemeriksaan Sebelum Running Test Genset',
-            isExpanded: _expandedForm == 'sebelum',
-            onToggle: () => _toggleForm('sebelum'),
-            isInnerAccordion: true,
+          // ==========================================
+          // ACCORDION SEBELUM RUNNING (SEKARANG JADI CONTAINER BIASA)
+          // ==========================================
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Text(
+                  'PEMERIKSAAN SEBELUM RUNNING TEST GENSET',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF3F51B5)),
+                ),
+                const Divider(),
+                const SizedBox(height: 8),
+                
                 ..._radioValues.keys.map((key) => CustomRadioRow(
                   label: key,
                   groupValue: _radioValues[key]!,
@@ -312,15 +309,24 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 16),
 
-          // --- ACCORDION SAAT RUNNING ---
-          AccordionSection(
-            title: 'Pemeriksaan Saat Running Test Genset',
-            isExpanded: _expandedForm == 'saat',
-            onToggle: () => _toggleForm('saat'),
-            isInnerAccordion: true,
+          // ==========================================
+          // ACCORDION SAAT RUNNING (SEKARANG JADI CONTAINER BIASA)
+          // ==========================================
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Text(
+                  'PEMERIKSAAN SAAT RUNNING TEST GENSET',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF3F51B5)),
+                ),
+                const Divider(),
+                const SizedBox(height: 8),
+
                 ...['Tegangan Output F/F', 'Tegangan Output F/N', 'Frekuensi', 'Cos Phi', 
                 'Rpm Motor'].map((key) => CustomNumberField(
                   label: key,
