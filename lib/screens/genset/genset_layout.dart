@@ -38,7 +38,10 @@ class _GensetLayoutState extends State<GensetLayout> {
               duration: const Duration(milliseconds: 300),
               width: _isSidebarCollapsed ? 70 : 250,
               color: Colors.white,
-              child: _buildSidebarContent(isDesktop: true),
+              // ClipRect mencegah teks meluber/turun ke bawah saat animasi
+              child: ClipRect(
+                child: _buildSidebarContent(isDesktop: true),
+              ),
             ),
           if (!isMobile) const VerticalDivider(width: 1, thickness: 1),
           
@@ -66,8 +69,16 @@ class _GensetLayoutState extends State<GensetLayout> {
           child: Row(
             mainAxisAlignment: _isSidebarCollapsed ? MainAxisAlignment.center : MainAxisAlignment.spaceBetween,
             children: [
+              // Teks Header
               if (!_isSidebarCollapsed)
-                const Text('Menu Genset', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF3F51B5))),
+                const Flexible(
+                  child: Text(
+                    'Menu Genset', 
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF3F51B5)),
+                    overflow: TextOverflow.clip, // Mencegah teks turun baris
+                    maxLines: 1,
+                  ),
+                ),
               if (isDesktop)
                 IconButton(
                   icon: Icon(_isSidebarCollapsed ? Icons.chevron_right : Icons.chevron_left, color: Colors.grey[700]),
@@ -80,8 +91,6 @@ class _GensetLayoutState extends State<GensetLayout> {
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
-              // Menu "Kembali ke Menu Awal" sudah DIHAPUS dari sini
-              
               _buildMenuItem(
                 icon: Icons.assignment, title: 'Pengisian', isActive: _selectedIndex == 0, isDesktop: isDesktop,
                 onTap: () {
@@ -118,7 +127,15 @@ class _GensetLayoutState extends State<GensetLayout> {
             Icon(icon, color: isActive ? const Color(0xFF3F51B5) : Colors.grey[600]),
             if (!_isSidebarCollapsed) ...[
               const SizedBox(width: 16),
-              Expanded(child: Text(title, style: TextStyle(fontSize: 14, fontWeight: isActive ? FontWeight.bold : FontWeight.normal, color: isActive ? const Color(0xFF3F51B5) : Colors.grey[800]))),
+              // Expanded + maxLines: 1 memastikan teks tidak turun ke bawah saat animasi
+              Expanded(
+                child: Text(
+                  title, 
+                  style: TextStyle(fontSize: 14, fontWeight: isActive ? FontWeight.bold : FontWeight.normal, color: isActive ? const Color(0xFF3F51B5) : Colors.grey[800]),
+                  overflow: TextOverflow.clip, // Memotong teks, bukan turun baris
+                  maxLines: 1,
+                ),
+              ),
             ],
           ],
         ),
