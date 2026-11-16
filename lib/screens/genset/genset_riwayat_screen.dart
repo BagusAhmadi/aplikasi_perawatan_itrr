@@ -288,6 +288,9 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
           ),
           const SizedBox(height: 16),
 
+          // ==========================================
+          // KOTAK KALENDER
+          // ==========================================
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -297,6 +300,7 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
             ),
             child: Column(
               children: [
+                // Header Bulan & Tombol Navigasi
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -315,13 +319,31 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((day) => 
-                    SizedBox(width: 32, child: Text(day, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)))
-                  ).toList(),
+                
+                // Baris Nama Hari
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 320),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((day) => 
+                        // Lebar 44 disamakan dengan kotak tanggal
+                        SizedBox(
+                          width: 44, 
+                          child: Text(
+                            day, 
+                            textAlign: TextAlign.center, 
+                            style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)
+                          )
+                        )
+                      ).toList(),
+                    ),
+                  ),
                 ),
+                
                 const Divider(),
+                
+                // Grid Tanggal
                 _buildCalendarGrid(),
               ],
             ),
@@ -329,6 +351,9 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
           
           const SizedBox(height: 24),
 
+          // ==========================================
+          // DAFTAR RIWAYAT DI BAWAH KALENDER
+          // ==========================================
           if (_selectedDate != null) ...[
             Text(
               'Tanggal Terpilih: ${DateFormat('dd MMMM yyyy', 'id_ID').format(_selectedDate!)}',
@@ -362,10 +387,12 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
     
     List<Widget> dayWidgets = [];
 
+    // Kotak kosong sebelum tanggal 1
     for (int i = 1; i < firstWeekday; i++) {
       dayWidgets.add(const SizedBox(width: 44, height: 44));
     }
 
+    // Isi Tanggal
     for (int i = 1; i <= totalDays; i++) {
       final date = DateTime(_currentMonth.year, _currentMonth.month, i);
       final hasData = _hasDataOnDate(date);
@@ -375,30 +402,34 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
                          _selectedDate!.year == _currentMonth.year;
 
       dayWidgets.add(
-        GestureDetector(
-          onTap: () => setState(() => _selectedDate = date),
-          child: Container(
-            width: 40, // Ukuran kotak tanggal dikunci
-            height: 40,
-            margin: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: isSelected 
-                ? const Color(0xFF3F51B5)
-                : hasData 
-                  ? Colors.green 
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isSelected ? const Color(0xFF3F51B5) : Colors.transparent,
-                width: 2,
+        Container(
+          width: 44, // Disamakan dengan lebar nama hari
+          height: 44, 
+          alignment: Alignment.center,
+          child: GestureDetector(
+            onTap: () => setState(() => _selectedDate = date),
+            child: Container(
+              width: 36, // Ukuran kotak tanggal di dalamnya
+              height: 36,
+              decoration: BoxDecoration(
+                color: isSelected 
+                  ? const Color(0xFF3F51B5)
+                  : hasData 
+                    ? Colors.green 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isSelected ? const Color(0xFF3F51B5) : Colors.transparent,
+                  width: 2,
+                ),
               ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '$i',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isSelected || hasData ? Colors.white : Colors.black87,
+              alignment: Alignment.center,
+              child: Text(
+                '$i',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isSelected || hasData ? Colors.white : Colors.black87,
+                ),
               ),
             ),
           ),
@@ -406,20 +437,21 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
       );
     }
 
-    // Membatasi lebar maksimal kalender agar tetap rapi di tablet/desktop
+    // Bungkus dengan Center & ConstrainedBox agar tidak melar
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 320), 
+        constraints: const BoxConstraints(maxWidth: 308), // 44 * 7 hari = 308
         child: Wrap(
           alignment: WrapAlignment.start,
-          spacing: 4,
-          runSpacing: 4,
           children: dayWidgets,
         ),
       ),
     );
   }
 
+  // ==========================================
+  // KARTU RIWAYAT
+  // ==========================================
   Widget _buildRiwayatCard(GensetModel item) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
