@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'genset/genset_layout.dart';
+import 'global_riwayat_screen.dart'; // Import halaman riwayat global
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,6 +10,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0; // 0 = Pengisian, 1 = Riwayat Global
+
+  // State Form Dropdown
   String? _selectedInstalasi;
   String? _selectedPeriode;
   String? _selectedSSK;
@@ -21,166 +25,180 @@ class _HomeScreenState extends State<HomeScreen> {
         _selectedSSK != null &&
         _selectedJenis != null;
 
-    // Tentukan gedung berdasarkan SSK yang dipilih
     String gedungTerpilih = _selectedSSK == 'Sistem Catudaya Listrik Emergency GD 11' 
         ? 'gedung 11' 
         : 'gedung 13';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF3F51B5),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(20),
-                    bottomRight: Radius.circular(20),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x4D3F51B5),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    )
-                  ]
-                ),
-                child: const Text(
-                  'Aplikasi Perawatan',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
-                  ),
-                ),
+      // Menambahkan Sidebar (Drawer)
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Color(0xFF3F51B5)),
+              child: Text(
+                'Menu Utama',
+                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
               ),
-
-              Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildLabel('Pilih Instalasi / Kawasan'),
-                    _buildDropdown(
-                      hint: '-- Pilih Instalasi --',
-                      value: _selectedInstalasi,
-                      items: ['ITRR'],
-                      enabled: true,
-                      onChanged: (val) {
-                        setState(() {
-                          _selectedInstalasi = val;
-                          _selectedPeriode = null;
-                          _selectedSSK = null;
-                          _selectedJenis = null;
-                        });
-                      },
-                    ),
-
-                    _buildLabel('Periode'),
-                    _buildDropdown(
-                      hint: _selectedInstalasi == null ? '-- Pilih Instalasi Dulu --' : '-- Pilih Periode --',
-                      value: _selectedPeriode,
-                      items: _selectedInstalasi != null ? ['1 Mingguan'] : [],
-                      enabled: _selectedInstalasi != null,
-                      onChanged: (val) {
-                        setState(() {
-                          _selectedPeriode = val;
-                          _selectedSSK = null;
-                          _selectedJenis = null;
-                        });
-                      },
-                    ),
-
-                    _buildLabel('SSK'),
-                    _buildDropdown(
-                      hint: _selectedPeriode == null ? '-- Pilih Periode Dulu --' : '-- Pilih SSK --',
-                      value: _selectedSSK,
-                      // SEKARANG ADA 2 PILIHAN SSK
-                      items: _selectedPeriode != null 
-                          ? [
-                              'Sistem Catudaya Listrik Emergency GD 11',
-                              'Sistem Catudaya Listrik Emergency GD 13'
-                            ] 
-                          : [],
-                      enabled: _selectedPeriode != null,
-                      onChanged: (val) {
-                        setState(() {
-                          _selectedSSK = val;
-                          _selectedJenis = null;
-                        });
-                      },
-                    ),
-
-                    _buildLabel('Jenis Pengujian / Perawatan'),
-                    _buildDropdown(
-                      hint: _selectedSSK == null ? '-- Pilih SSK Dulu --' : '-- Pilih Jenis Pengujian --',
-                      value: _selectedJenis,
-                      items: _selectedSSK != null ? ['Uji running tanpa beban 15 menit'] : [],
-                      enabled: _selectedSSK != null,
-                      onChanged: (val) {
-                        setState(() {
-                          _selectedJenis = val;
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    ElevatedButton(
-                      onPressed: isFormComplete
-                          ? () {
-                              // Mengirim parameter gedungTerpilih ke halaman Genset
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => GensetLayout(
-                                    gedungSSK: gedungTerpilih,
-                                  ),
-                                ),
-                              );
-                            }
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3F51B5),
-                        disabledBackgroundColor: const Color(0xFFB0BEC5),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        elevation: isFormComplete ? 4 : 0,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Text(
-                            'Buka Form Pengujian',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward_ios, size: 16),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Pengisian'),
+              selected: _selectedIndex == 0,
+              onTap: () {
+                setState(() => _selectedIndex = 0);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Riwayat Semua Perawatan'),
+              selected: _selectedIndex == 1,
+              onTap: () {
+                setState(() => _selectedIndex = 1);
+                Navigator.pop(context);
+              },
+            ),
+          ],
         ),
+      ),
+      appBar: AppBar(
+        title: Text(_selectedIndex == 0 ? 'Aplikasi Perawatan' : 'Riwayat Semua'),
+        backgroundColor: const Color(0xFF3F51B5),
+        foregroundColor: Colors.white,
+      ),
+      body: _selectedIndex == 0 
+          ? _buildFormPengisian(isFormComplete, gedungTerpilih)
+          : const GlobalRiwayatScreen(),
+    );
+  }
+
+  Widget _buildFormPengisian(bool isFormComplete, String gedungTerpilih) {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // ... (Seluruh UI Form Dropdown dari kode home_screen sebelumnya) ...
+          // (Mulai dari Container biru, Pilih Instalasi, Periode, SSK, Jenis, sampai Tombol Buka)
+          
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildLabel('Pilih Instalasi / Kawasan'),
+                _buildDropdown(
+                  hint: '-- Pilih Instalasi --',
+                  value: _selectedInstalasi,
+                  items: ['ITRR'],
+                  enabled: true,
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedInstalasi = val;
+                      _selectedPeriode = null;
+                      _selectedSSK = null;
+                      _selectedJenis = null;
+                    });
+                  },
+                ),
+
+                _buildLabel('Periode'),
+                _buildDropdown(
+                  hint: _selectedInstalasi == null ? '-- Pilih Instalasi Dulu --' : '-- Pilih Periode --',
+                  value: _selectedPeriode,
+                  items: _selectedInstalasi != null ? ['1 Mingguan'] : [],
+                  enabled: _selectedInstalasi != null,
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedPeriode = val;
+                      _selectedSSK = null;
+                      _selectedJenis = null;
+                    });
+                  },
+                ),
+
+                _buildLabel('SSK'),
+                _buildDropdown(
+                  hint: _selectedPeriode == null ? '-- Pilih Periode Dulu --' : '-- Pilih SSK --',
+                  value: _selectedSSK,
+                  items: _selectedPeriode != null 
+                      ? [
+                          'Sistem Catudaya Listrik Emergency GD 11',
+                          'Sistem Catudaya Listrik Emergency GD 13'
+                        ] 
+                      : [],
+                  enabled: _selectedPeriode != null,
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedSSK = val;
+                      _selectedJenis = null;
+                    });
+                  },
+                ),
+
+                _buildLabel('Jenis Pengujian / Perawatan'),
+                _buildDropdown(
+                  hint: _selectedSSK == null ? '-- Pilih SSK Dulu --' : '-- Pilih Jenis Pengujian --',
+                  value: _selectedJenis,
+                  items: _selectedSSK != null ? ['Uji running tanpa beban 15 menit'] : [],
+                  enabled: _selectedSSK != null,
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedJenis = val;
+                    });
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                ElevatedButton(
+                  onPressed: isFormComplete
+                      ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => GensetLayout(
+                                gedungSSK: gedungTerpilih,
+                              ),
+                            ),
+                          );
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3F51B5),
+                    disabledBackgroundColor: const Color(0xFFB0BEC5),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: isFormComplete ? 4 : 0,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Text(
+                        'Buka Form Pengujian',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Icon(Icons.arrow_forward_ios, size: 16),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
+  // ... (_buildLabel dan _buildDropdown tetap sama seperti sebelumnya) ...
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
