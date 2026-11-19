@@ -7,14 +7,16 @@ import 'pdf_generator.dart';
 import 'pdf_preview_screen.dart';
 
 class GensetRiwayatScreen extends StatefulWidget {
-  const GensetRiwayatScreen({super.key});
+  final String gedungSSK; // Menerima parameter gedung dari halaman depan
+  const GensetRiwayatScreen({super.key, required this.gedungSSK});
 
   @override
   State<GensetRiwayatScreen> createState() => _GensetRiwayatScreenState();
 }
 
 class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
-  List<GensetModel> _data = [];
+  List<GensetModel> _allData = []; // Data asli dari database
+  List<GensetModel> _data = [];    // Data yang sudah difilter berdasarkan gedung
   bool _isLoading = true;
   bool _isProcessingPdf = false;
 
@@ -32,7 +34,11 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
     setState(() => _isLoading = true);
     final data = await GensetRiwayatLogic.loadData();
     setState(() {
-      _data = data;
+      _allData = data;
+      // Filter HANYA menampilkan data dari gedung yang dipilih di halaman depan
+      _data = _allData.where((item) => 
+        item.gedung.toLowerCase() == widget.gedungSSK.toLowerCase()
+      ).toList();
       _isLoading = false;
     });
   }
@@ -53,11 +59,9 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
   // ==========================================
   Future<void> _bukaPratinjauPdf(GensetModel item) async {
     try {
-      // Generate PDF
       final Uint8List pdfBytes = await PdfGenerator.buatPdf(item);
       if (!mounted) return;
       
-      // Buka Halaman Pratinjau
       await Navigator.push(
         context,
         MaterialPageRoute(
@@ -97,6 +101,9 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
 
+    // Teks tombol ekspor menyesuaikan gedung
+    String namaGedung = widget.gedungSSK == 'gedung 11' ? 'GD 11' : 'GD 13';
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -105,9 +112,13 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: ElevatedButton.icon(
-              onPressed: () => GensetRiwayatLogic.mulaiEksporDatabase(context, _loadData),
+              onPressed: () => GensetRiwayatLogic.mulaiEksporDatabase(
+                context, 
+                _loadData,
+                filterGedung: widget.gedungSSK, // Kirim filter gedung ke logic
+              ),
               icon: const Icon(Icons.save_alt),
-              label: const Text('Ekspor Database'),
+              label: Text('Ekspor DB ($namaGedung)'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blueGrey[700],
                 foregroundColor: Colors.white,
@@ -258,7 +269,7 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
   }
 
   // ==========================================
-  // KARTU RIWAYAT (TOMBOL TETAP ADA, ATAS BISA DIKLIK)
+  // KARTU RIWAYAT
   // ==========================================
   Widget _buildRiwayatCard(GensetModel item) {
     return Card(

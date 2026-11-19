@@ -3,7 +3,8 @@ import 'genset_form_screen.dart';
 import 'genset_riwayat_screen.dart';
 
 class GensetLayout extends StatefulWidget {
-  const GensetLayout({super.key});
+  final String gedungSSK; // Parameter baru
+  const GensetLayout({super.key, required this.gedungSSK});
 
   @override
   State<GensetLayout> createState() => _GensetLayoutState();
@@ -22,9 +23,12 @@ class _GensetLayoutState extends State<GensetLayout> {
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 768;
 
+    // Format judul AppBar berdasarkan gedung
+    String judulGedung = widget.gedungSSK == 'gedung 11' ? 'GD 11' : 'GD 13';
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titles[_selectedIndex], style: const TextStyle(fontSize: 16)),
+        title: Text('${_titles[_selectedIndex]} - $judulGedung', style: const TextStyle(fontSize: 16)),
         backgroundColor: const Color(0xFF3F51B5),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -32,26 +36,25 @@ class _GensetLayoutState extends State<GensetLayout> {
       drawer: isMobile ? Drawer(child: _buildSidebarContent()) : null,
       body: Row(
         children: [
-          // Sidebar untuk Desktop
           if (!isMobile)
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               width: _isSidebarCollapsed ? 70 : 250,
               color: Colors.white,
-              // ClipRect mencegah teks meluber/turun ke bawah saat animasi
               child: ClipRect(
                 child: _buildSidebarContent(isDesktop: true),
               ),
             ),
           if (!isMobile) const VerticalDivider(width: 1, thickness: 1),
           
-          // Area Konten Utama
           Expanded(
             child: Container(
               color: Colors.grey[100],
               child: _selectedIndex == 0
-                  ? const GensetFormScreen()
-                  : const GensetRiwayatScreen(),
+                  // Kirim gedung ke form
+                  ? GensetFormScreen(gedungSSK: widget.gedungSSK)
+                  // Kirim gedung ke riwayat
+                  : GensetRiwayatScreen(gedungSSK: widget.gedungSSK),
             ),
           ),
         ],
@@ -69,13 +72,12 @@ class _GensetLayoutState extends State<GensetLayout> {
           child: Row(
             mainAxisAlignment: _isSidebarCollapsed ? MainAxisAlignment.center : MainAxisAlignment.spaceBetween,
             children: [
-              // Teks Header
               if (!_isSidebarCollapsed)
                 const Flexible(
                   child: Text(
                     'Menu Genset', 
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF3F51B5)),
-                    overflow: TextOverflow.clip, // Mencegah teks turun baris
+                    overflow: TextOverflow.clip,
                     maxLines: 1,
                   ),
                 ),
@@ -127,12 +129,11 @@ class _GensetLayoutState extends State<GensetLayout> {
             Icon(icon, color: isActive ? const Color(0xFF3F51B5) : Colors.grey[600]),
             if (!_isSidebarCollapsed) ...[
               const SizedBox(width: 16),
-              // Expanded + maxLines: 1 memastikan teks tidak turun ke bawah saat animasi
               Expanded(
                 child: Text(
                   title, 
                   style: TextStyle(fontSize: 14, fontWeight: isActive ? FontWeight.bold : FontWeight.normal, color: isActive ? const Color(0xFF3F51B5) : Colors.grey[800]),
-                  overflow: TextOverflow.clip, // Memotong teks, bukan turun baris
+                  overflow: TextOverflow.clip,
                   maxLines: 1,
                 ),
               ),

@@ -9,7 +9,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // State untuk menyimpan nilai yang dipilih
   String? _selectedInstalasi;
   String? _selectedPeriode;
   String? _selectedSSK;
@@ -17,11 +16,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Cek apakah semua form sudah terisi untuk mengaktifkan tombol
     bool isFormComplete = _selectedInstalasi != null &&
         _selectedPeriode != null &&
         _selectedSSK != null &&
         _selectedJenis != null;
+
+    // Tentukan gedung berdasarkan SSK yang dipilih
+    String gedungTerpilih = _selectedSSK == 'Sistem Catudaya Listrik Emergency GD 11' 
+        ? 'gedung 11' 
+        : 'gedung 13';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
@@ -29,9 +32,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // ==========================================
-              // HEADER BIRU
-              // ==========================================
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
@@ -61,16 +61,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // ==========================================
-              // KONTEN FORM
-              // ==========================================
               Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    
-                    // 1. Dropdown Instalasi
                     _buildLabel('Pilih Instalasi / Kawasan'),
                     _buildDropdown(
                       hint: '-- Pilih Instalasi --',
@@ -80,7 +75,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       onChanged: (val) {
                         setState(() {
                           _selectedInstalasi = val;
-                          // Reset dropdown di bawahnya jika yang atas berubah
                           _selectedPeriode = null;
                           _selectedSSK = null;
                           _selectedJenis = null;
@@ -88,7 +82,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
 
-                    // 2. Dropdown Periode
                     _buildLabel('Periode'),
                     _buildDropdown(
                       hint: _selectedInstalasi == null ? '-- Pilih Instalasi Dulu --' : '-- Pilih Periode --',
@@ -104,12 +97,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
 
-                    // 3. Dropdown SSK
                     _buildLabel('SSK'),
                     _buildDropdown(
                       hint: _selectedPeriode == null ? '-- Pilih Periode Dulu --' : '-- Pilih SSK --',
                       value: _selectedSSK,
-                      items: _selectedPeriode != null ? ['Sistem Catudaya Listrik Emergency'] : [],
+                      // SEKARANG ADA 2 PILIHAN SSK
+                      items: _selectedPeriode != null 
+                          ? [
+                              'Sistem Catudaya Listrik Emergency GD 11',
+                              'Sistem Catudaya Listrik Emergency GD 13'
+                            ] 
+                          : [],
                       enabled: _selectedPeriode != null,
                       onChanged: (val) {
                         setState(() {
@@ -119,7 +117,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
 
-                    // 4. Dropdown Jenis Pengujian
                     _buildLabel('Jenis Pengujian / Perawatan'),
                     _buildDropdown(
                       hint: _selectedSSK == null ? '-- Pilih SSK Dulu --' : '-- Pilih Jenis Pengujian --',
@@ -135,21 +132,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 20),
 
-                    // ==========================================
-                    // TOMBOL BUKA
-                    // ==========================================
                     ElevatedButton(
                       onPressed: isFormComplete
                           ? () {
-                              // Navigasi ke halaman Genset
+                              // Mengirim parameter gedungTerpilih ke halaman Genset
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const GensetLayout(),
+                                  builder: (context) => GensetLayout(
+                                    gedungSSK: gedungTerpilih,
+                                  ),
                                 ),
                               );
                             }
-                          : null, // Tombol disabled jika form belum lengkap
+                          : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF3F51B5),
                         disabledBackgroundColor: const Color(0xFFB0BEC5),
@@ -185,9 +181,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ==========================================
-  // WIDGET HELPER UNTUK LABEL
-  // ==========================================
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
@@ -202,9 +195,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ==========================================
-  // WIDGET HELPER UNTUK DROPDOWN
-  // ==========================================
   Widget _buildDropdown({
     required String hint,
     required String? value,
@@ -230,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         decoration: InputDecoration(
           filled: true,
-          fillColor: enabled ? Colors.white : const Color(0xFFEEEEEE), // Abu-abu jika disabled
+          fillColor: enabled ? Colors.white : const Color(0xFFEEEEEE),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
@@ -249,7 +239,6 @@ class _HomeScreenState extends State<HomeScreen> {
             borderSide: const BorderSide(color: Color(0xFF3F51B5), width: 2),
           ),
         ),
-        // Jika enabled false, kita set onChanged ke null agar dropdown tidak bisa dibuka
         onChanged: enabled ? onChanged : null,
         items: items.map((String item) {
           return DropdownMenuItem<String>(

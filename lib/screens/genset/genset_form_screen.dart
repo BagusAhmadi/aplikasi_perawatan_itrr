@@ -5,10 +5,11 @@ import 'genset_model.dart';
 import 'genset_database.dart';
 import 'pdf_generator.dart';
 import 'genset_pelaksana_section.dart';
-import 'pdf_preview_screen.dart'; // Import halaman pratinjau PDF
+import 'pdf_preview_screen.dart';
 
 class GensetFormScreen extends StatefulWidget {
-  const GensetFormScreen({super.key});
+  final String gedungSSK; // Menerima parameter gedung dari halaman depan
+  const GensetFormScreen({super.key, required this.gedungSSK});
 
   @override
   State<GensetFormScreen> createState() => _GensetFormScreenState();
@@ -19,7 +20,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   // BAGIAN 1: STATE / VARIABEL DATA FORM
   // ==========================================
   DateTime _tanggalTerpilih = DateTime.now();
-  String _pilihanGedung = 'gedung_11';
+  late String _pilihanGedung; // Menggunakan 'late' karena diisi di initState
 
   final Map<String, String> _radioValues = {
     'Level Oli Mesin': 'baik',
@@ -41,7 +42,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
 
   final Map<String, TextEditingController> _angkaControllers = {};
 
-  // Controller untuk Pelaksana (Catatan tidak masuk validasi)
   final List<TextEditingController> _pelaksanaControllers = List.generate(4, (index) => TextEditingController());
   final TextEditingController _koordinatorController = TextEditingController();
   final TextEditingController _catatanController = TextEditingController();
@@ -52,13 +52,15 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   String? _hourMeterOffSebelumnya;
   bool _isLoadingHourMeter = false;
 
-  // State tambahan untuk memicu validasi tombol simpan
   bool _isFormValid = false; 
 
   @override
   void initState() {
     super.initState();
     
+    // Inisialisasi gedung berdasarkan parameter dari halaman depan
+    _pilihanGedung = widget.gedungSSK.replaceAll(' ', '_');
+
     for (var key in _angkaValues.keys) {
       _angkaControllers[key] = TextEditingController(text: _angkaValues[key]);
     }
@@ -81,7 +83,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   void _resetForm() {
     setState(() {
       _tanggalTerpilih = DateTime.now();
-      _pilihanGedung = 'gedung_11';
+      // Gedung tidak di-reset, tetap menggunakan gedungSSK
       
       _radioValues.updateAll((key, value) => 'baik');
       
@@ -94,10 +96,9 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
       _koordinatorController.clear();
       _catatanController.clear();
 
-      _isFormValid = false; // Kembalikan tombol simpan ke disabled
+      _isFormValid = false; 
     });
     
-    // Cek ulang hour meter untuk tanggal dan gedung default
     _cekHourMeterSebelumnya(); 
   }
 
@@ -105,19 +106,12 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   // BAGIAN 3: VALIDASI FORM
   // ==========================================
   void _cekValidasi() {
-    // Cek apakah semua form input angka sudah terisi
     bool allAngkaValid = _angkaValues.values.every((val) => val.trim().isNotEmpty);
-    
-    // Cek apakah minimal 1 pelaksana yang diisi
     bool adaPelaksana = _pelaksanaControllers.any((c) => c.text.trim().isNotEmpty);
-    
-    // Cek apakah koordinator sudah diisi
     bool adaKoordinator = _koordinatorController.text.trim().isNotEmpty;
 
-    // Gabungkan hasil validasi
     bool isValid = allAngkaValid && adaPelaksana && adaKoordinator;
 
-    // Jika status validasi berubah, perbarui UI
     if (_isFormValid != isValid) {
       setState(() {
         _isFormValid = isValid;
@@ -147,7 +141,7 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
       _hourMeterOffSebelumnya = val;
       _isLoadingHourMeter = false;
     });
-    _cekValidasi(); // Cek validasi setiap kali data hour meter berubah
+    _cekValidasi();
   }
 
   // ==========================================
@@ -187,17 +181,14 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
         catatan: _catatanController.text.trim(),
       );
 
-      // 1. Simpan ke SQLite
       await GensetDatabase.simpan(dataBaru);
       
       if (!mounted) return;
       setState(() => _isSaving = false);
 
-      // 2. Generate PDF
       final pdfBytes = await PdfGenerator.buatPdf(dataBaru);
       if (!mounted) return;
 
-      // 3. Buka Halaman Pratinjau PDF (PdfPreviewScreen)
       await Navigator.push(
         context,
         MaterialPageRoute(
@@ -208,7 +199,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
         ),
       );
 
-      // 4. Setelah halaman pratinjau ditutup, reset form
       if (mounted) {
         _resetForm();
       }
@@ -225,6 +215,9 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
   // ==========================================
   @override
   Widget build(BuildContext context) {
+    // Format nama gedung untuk tampilan (Gedung 11 / Gedung 13)
+    String namaGedungTampil = widget.gedungSSK == 'gedung 11' ? 'Gedung 11' : 'Gedung 13';
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -272,36 +265,22 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
           ),
           const SizedBox(height: 16),
 
-          // --- SECTION GEDUNG ---
+          // --- SECTION GEDUNG (TERKUNCI) ---
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('PILIH GEDUNG', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey)),
+                const Text('GEDUNG PENGUJIAN', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey)),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Expanded(
-                      child: RadioListTile<String>(
-                        title: const Text('Gedung 11', style: TextStyle(fontSize: 14)),
-                        value: 'gedung_11', groupValue: _pilihanGedung, activeColor: const Color(0xFF3F51B5), contentPadding: EdgeInsets.zero, dense: true,
-                        onChanged: (val) {
-                          setState(() => _pilihanGedung = val!);
-                          _cekHourMeterSebelumnya();
-                        },
-                      ),
-                    ),
-                    Expanded(
-                      child: RadioListTile<String>(
-                        title: const Text('Gedung 13', style: TextStyle(fontSize: 14)),
-                        value: 'gedung_13', groupValue: _pilihanGedung, activeColor: const Color(0xFF3F51B5), contentPadding: EdgeInsets.zero, dense: true,
-                        onChanged: (val) {
-                          setState(() => _pilihanGedung = val!);
-                          _cekHourMeterSebelumnya();
-                        },
-                      ),
+                    const Icon(Icons.lock, color: Colors.blueGrey, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      namaGedungTampil,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
                     ),
                   ],
                 ),
@@ -368,7 +347,6 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
                   },
                 )),
                 
-                // HOUR METER ON
                 CustomNumberField(
                   label: 'Hour meter ON',
                   controller: _angkaControllers['Hour meter ON'],
@@ -435,13 +413,12 @@ class _GensetFormScreenState extends State<GensetFormScreen> {
             pelaksanaControllers: _pelaksanaControllers,
             koordinatorController: _koordinatorController,
             catatanController: _catatanController,
-            onTextChanged: _cekValidasi, // Memanggil validasi saat mengetik
+            onTextChanged: _cekValidasi,
           ),
 
           // --- TOMBOL SIMPAN ---
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            // Tombol hanya bisa diklik jika _isFormValid bernilai true dan tidak sedang menyimpan
             onPressed: (_isFormValid && !_isSaving) ? _simpanData : null,
             icon: _isSaving
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))

@@ -8,12 +8,16 @@ import 'genset_database.dart';
 import 'pdf_generator.dart';
 
 class GensetRiwayatLogic {
-  // --- FUNGSI LOAD DATA ---
+  // ==========================================
+  // FUNGSI LOAD DATA
+  // ==========================================
   static Future<List<GensetModel>> loadData() async {
     return await GensetDatabase.bacaSemua();
   }
 
-  // --- FUNGSI CETAK PDF ---
+  // ==========================================
+  // FUNGSI CETAK / SIMPAN PDF
+  // ==========================================
   static Future<void> buatDanSimpanPdf(BuildContext context, GensetModel item, Function(bool) setLoading) async {
     setLoading(true);
     try {
@@ -42,12 +46,14 @@ class GensetRiwayatLogic {
       if (!context.mounted) return;
       setLoading(false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mencetak PDF: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Gagal menyimpan PDF: $e'), backgroundColor: Colors.red),
       );
     }
   }
 
-  // --- FUNGSI HAPUS DATA ---
+  // ==========================================
+  // FUNGSI HAPUS DATA
+  // ==========================================
   static Future<bool> konfirmasiHapus(BuildContext context, GensetModel item) async {
     final konfirmasi = await showDialog<bool>(
       context: context,
@@ -71,8 +77,14 @@ class GensetRiwayatLogic {
     return false;
   }
 
-  // --- ALUR EKSPOR DATABASE ---
-  static Future<void> mulaiEksporDatabase(BuildContext context, VoidCallback onBerhasilEkspor) async {
+  // ==========================================
+  // FUNGSI EKSPOR DATABASE (LANGSUNG FILTER GEDUNG)
+  // ==========================================
+  static Future<void> mulaiEksporDatabase(
+    BuildContext context, 
+    VoidCallback onBerhasilEkspor, {
+    required String filterGedung, // Wajib diisi dari halaman depan
+  }) async {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
@@ -84,12 +96,23 @@ class GensetRiwayatLogic {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Pilih Waktu Ekspor', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  'Ekspor Data ${filterGedung.toUpperCase()}', 
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 16),
                 ListTile(
                   leading: const Icon(Icons.all_inbox),
                   title: const Text('Semua Data'),
-                  onTap: () { Navigator.pop(ctx); _pilihGedungEkspor(context, onBerhasilEkspor); },
+                  onTap: () { 
+                    Navigator.pop(ctx); 
+                    _prosesEkspor(
+                      context, 
+                      onBerhasilEkspor, 
+                      gedungList: [filterGedung],
+                    ); 
+                  },
                 ),
                 ListTile(
                   leading: const Icon(Icons.calendar_month),
@@ -100,7 +123,15 @@ class GensetRiwayatLogic {
                       context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030),
                       helpText: 'Pilih Bulan (Tanggal tidak penting)',
                     );
-                    if (picked != null) _pilihGedungEkspor(context, onBerhasilEkspor, bulan: picked.month, tahun: picked.year);
+                    if (picked != null) {
+                      _prosesEkspor(
+                        context, 
+                        onBerhasilEkspor, 
+                        bulan: picked.month, 
+                        tahun: picked.year,
+                        gedungList: [filterGedung],
+                      );
+                    }
                   },
                 ),
                 ListTile(
@@ -111,7 +142,14 @@ class GensetRiwayatLogic {
                     final picked = await showDatePicker(
                       context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030),
                     );
-                    if (picked != null) _pilihGedungEkspor(context, onBerhasilEkspor, tanggal: picked);
+                    if (picked != null) {
+                      _prosesEkspor(
+                        context, 
+                        onBerhasilEkspor, 
+                        tanggal: picked,
+                        gedungList: [filterGedung],
+                      );
+                    }
                   },
                 ),
               ],
@@ -122,68 +160,9 @@ class GensetRiwayatLogic {
     );
   }
 
-  static Future<void> _pilihGedungEkspor(BuildContext context, VoidCallback onBerhasilEkspor, {DateTime? tanggal, int? bulan, int? tahun}) async {
-    bool pilihGedung11 = true;
-    bool pilihGedung13 = true;
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: const Text('Pilih Gedung'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CheckboxListTile(
-                    title: const Text('Gedung 11'),
-                    value: pilihGedung11,
-                    onChanged: (val) => setStateDialog(() => pilihGedung11 = val!),
-                  ),
-                  CheckboxListTile(
-                    title: const Text('Gedung 13'),
-                    value: pilihGedung13,
-                    onChanged: (val) => setStateDialog(() => pilihGedung13 = val!),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx), 
-                  child: const Text('Batal')
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    List<String> gedungTerpilih = [];
-                    if (pilihGedung11) gedungTerpilih.add('gedung 11');
-                    if (pilihGedung13) gedungTerpilih.add('gedung 13');
-
-                    if (gedungTerpilih.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Pilih minimal satu gedung!'), backgroundColor: Colors.red),
-                      );
-                      return;
-                    }
-
-                    Navigator.pop(ctx);
-                    _prosesEkspor(context, onBerhasilEkspor, 
-                      tanggal: tanggal,
-                      bulan: bulan,
-                      tahun: tahun,
-                      gedungList: gedungTerpilih,
-                    );
-                  },
-                  child: const Text('Ekspor'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
+  // ==========================================
+  // PROSES EKSPOR (EKSEKUSI SQL)
+  // ==========================================
   static Future<void> _prosesEkspor(BuildContext context, VoidCallback onBerhasilEkspor, {
     DateTime? tanggal, 
     int? bulan, 
