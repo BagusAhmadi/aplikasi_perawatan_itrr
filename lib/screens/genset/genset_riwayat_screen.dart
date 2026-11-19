@@ -1,7 +1,10 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'genset_model.dart';
-import 'genset_riwayat_logic.dart'; // Import file logika
+import 'genset_riwayat_logic.dart';
+import 'pdf_generator.dart';
+import 'pdf_preview_screen.dart';
 
 class GensetRiwayatScreen extends StatefulWidget {
   const GensetRiwayatScreen({super.key});
@@ -27,7 +30,7 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final data = await GensetRiwayatLogic.loadData(); // Panggil dari Logic
+    final data = await GensetRiwayatLogic.loadData();
     setState(() {
       _data = data;
       _isLoading = false;
@@ -35,7 +38,7 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
   }
 
   void _hapusData(GensetModel item) async {
-    final berhasil = await GensetRiwayatLogic.konfirmasiHapus(context, item); // Panggil dari Logic
+    final berhasil = await GensetRiwayatLogic.konfirmasiHapus(context, item);
     if (berhasil) _loadData();
   }
 
@@ -46,8 +49,33 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
   }
 
   // ==========================================
-  // LOGIKA KALENDER
+  // FUNGSI BUKA PRATINJAU PDF (KLIK AREA ATAS)
   // ==========================================
+  Future<void> _bukaPratinjauPdf(GensetModel item) async {
+    try {
+      // Generate PDF
+      final Uint8List pdfBytes = await PdfGenerator.buatPdf(item);
+      if (!mounted) return;
+      
+      // Buka Halaman Pratinjau
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PdfPreviewScreen(
+            pdfBytes: pdfBytes,
+            fileName: 'Laporan_${item.id}.pdf',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal membuka PDF: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  // --- LOGIKA KALENDER ---
   bool _hasDataOnDate(DateTime date) {
     return _data.any((item) => 
       item.tanggal.year == date.year &&
@@ -77,7 +105,7 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: ElevatedButton.icon(
-              onPressed: () => GensetRiwayatLogic.mulaiEksporDatabase(context, _loadData), // Panggil dari Logic
+              onPressed: () => GensetRiwayatLogic.mulaiEksporDatabase(context, _loadData),
               icon: const Icon(Icons.save_alt),
               label: const Text('Ekspor Database'),
               style: ElevatedButton.styleFrom(
@@ -161,9 +189,6 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
     );
   }
 
-  // ==========================================
-  // GRID KALENDER (UKURAN TETAP & ANTI MELAR)
-  // ==========================================
   Widget _buildCalendarGrid() {
     final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final lastDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
@@ -233,7 +258,7 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
   }
 
   // ==========================================
-  // KARTU RIWAYAT
+  // KARTU RIWAYAT (TOMBOL TETAP ADA, ATAS BISA DIKLIK)
   // ==========================================
   Widget _buildRiwayatCard(GensetModel item) {
     return Card(
@@ -244,17 +269,36 @@ class _GensetRiwayatScreenState extends State<GensetRiwayatScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(item.gedung, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const Icon(Icons.check_circle, color: Colors.green, size: 20),
-              ],
+            // --- AREA ATAS: BISA DIKLIK UNTUK BUKA PDF ---
+            InkWell(
+              onTap: () => _bukaPratinjauPdf(item),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item.gedung, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          const SizedBox(height: 4),
+                          Text('Pelaksana: ${item.pelaksana.isNotEmpty ? item.pelaksana.join(", ") : "-"}', style: const TextStyle(fontSize: 12)),
+                          const SizedBox(height: 4),
+                          const Text('(Ketuk untuk melihat PDF)', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.blue)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.picture_as_pdf, color: Colors.red, size: 28),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 4),
-            Text('Pelaksana: ${item.pelaksana.isNotEmpty ? item.pelaksana.join(", ") : "-"}', style: const TextStyle(fontSize: 12)),
-            const SizedBox(height: 8),
+            
             const Divider(),
+
+            // --- AREA BAWAH: TOMBOL HAPUS & PDF ---
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
