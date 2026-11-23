@@ -8,31 +8,35 @@ import 'genset_model.dart';
 class PdfGenerator {
   static Future<Uint8List> buatPdf(GensetModel data) async {
     final doc = pw.Document();
-    final formatter = DateFormat('EEEE, dd MMMM yyyy, HH:mm', 'id_ID');
-    final waktuCetak = '${formatter.format(DateTime.now())} WIB';
 
-    // ==========================================
-    // BAGIAN 1: MEMUAT LOGO (OPSIONAL)
-    // ==========================================
+    // 1. Memuat Font Times New Roman
+    final fontData = await rootBundle.load('assets/fonts/TIMES.TTF');
+    final ttf = pw.Font.ttf(fontData);
+    
+    // 2. Tema Font Standar
+    final theme = pw.ThemeData.withFont(
+      base: ttf,
+      bold: ttf, 
+    );
+    final textStyle = pw.TextStyle(font: ttf, fontSize: 12);
+
+    // Memuat Logo
     pw.ImageProvider? logoImage;
     try {
       final ByteData logoData = await rootBundle.load('assets/logo.png');
       logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
-    } catch (e) {
-      // Abaikan jika logo belum ada di folder assets
-    }
+    } catch (e) {}
 
     doc.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
+        margin: const pw.EdgeInsets.only(left: 32, right: 32, top: 32, bottom: 16), // Margin bawah dikurangi
+        theme: theme,
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // ==========================================
-              // BAGIAN 2: HEADER KOP SURAT
-              // ==========================================
+              // HEADER
               pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
                 children: [
@@ -41,8 +45,8 @@ class PdfGenerator {
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('BADAN RISET DAN INOVASI NASIONAL', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                      pw.Text('FORM PENGUJIAN GENSET TANPA BEBAN', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                      pw.Text('BADAN RISET DAN INOVASI NASIONAL', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+                      pw.Text('FORM PENGUJIAN GENSET TANPA BEBAN', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold)),
                     ],
                   ),
                 ],
@@ -50,96 +54,93 @@ class PdfGenerator {
               pw.Divider(thickness: 2),
               pw.SizedBox(height: 12),
 
-              // ==========================================
-              // BAGIAN 3: INFO UMUM
-              // ==========================================
-              pw.Text('Tanggal: ${DateFormat('dd/MM/yyyy').format(data.tanggal)}'),
-              pw.Text('Gedung: ${data.gedung}'),
+              // INFO
+              pw.Text('Tanggal: ${DateFormat('dd/MM/yyyy').format(data.tanggal)}', style: textStyle),
+              pw.Text('Gedung: ${data.gedung}', style: textStyle),
               pw.SizedBox(height: 16),
 
-              // ==========================================
-              // BAGIAN 4: TABEL PEMERIKSAAN SEBELUM
-              // ==========================================
-              pw.Text('A. Pemeriksaan Sebelum Running Test', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+              // TABEL A
+              pw.Text('A. Pemeriksaan Sebelum Running Test', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 8),
               pw.Table(
                 border: pw.TableBorder.all(color: PdfColors.grey400),
                 children: [
                   pw.TableRow(children: [
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Item', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Kondisi / Nilai', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Item', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Kondisi / Nilai', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold))),
                   ]),
-                  
-                  // Data Radio (Baik/Rusak)
                   ...data.radioSebelum.entries.map((e) => pw.TableRow(children: [
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(e.key)),
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(e.value.toUpperCase())),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(e.key, style: textStyle)),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(e.value.toUpperCase(), style: textStyle)),
                   ])),
-                  
-                  // Data Angka "Sebelum Running"
                   pw.TableRow(children: [
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Battery Charger')),
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(data.angkaSaat['Battery Charger'] ?? '-')),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Battery Charger', style: textStyle)),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(data.angkaSaat['Battery Charger'] ?? '-', style: textStyle)),
                   ]),
                   pw.TableRow(children: [
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Tegangan Battery')),
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(data.angkaSaat['Tegangan Battery'] ?? '-')),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Tegangan Battery', style: textStyle)),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(data.angkaSaat['Tegangan Battery'] ?? '-', style: textStyle)),
                   ]),
                 ],
               ),
               pw.SizedBox(height: 16),
 
-              // ==========================================
-              // BAGIAN 5: TABEL PEMERIKSAAN SAAT RUNNING
-              // ==========================================
-              pw.Text('B. Pemeriksaan Saat Running Test', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+              // TABEL B
+              pw.Text('B. Pemeriksaan Saat Running Test', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 8),
               pw.Table(
                 border: pw.TableBorder.all(color: PdfColors.grey400),
                 children: [
                   pw.TableRow(children: [
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Item', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Nilai', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Item', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Nilai', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold))),
                   ]),
-                  // Hanya data "Saat Running"
                   ...[
                     'Tegangan Output F/F', 'Tegangan Output F/N', 'Frekuensi', 'Cos Phi', 
                     'Rpm Motor', 'Hour meter ON', 'Hour meter OFF', 'Temperatur Mesin', 
                     'Temperatur Air Cooler', 'Temperatur Oli'
                   ].map((key) => pw.TableRow(children: [
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(key)),
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(data.angkaSaat[key] ?? '-')),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(key, style: textStyle)),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(data.angkaSaat[key] ?? '-', style: textStyle)),
                   ])),
                 ],
               ),
               pw.SizedBox(height: 24),
 
-              // ==========================================
-              // BAGIAN 6: PELAKSANA & CATATAN (DIPERBARUI)
-              // ==========================================
-              pw.Text('Pelaksana:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              
-              // Looping data pelaksana dari database
+              // PELAKSANA
+              pw.Text('Pelaksana:', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold)),
               ...data.pelaksana.asMap().entries.map((entry) {
-                int idx = entry.key;
                 String nama = entry.value;
-                
-                // Jika data disimpan sebagai "Koordinator: Nama", kita ekstrak
                 if (nama.startsWith('Koordinator:')) {
                   nama = nama.replaceFirst('Koordinator:', '').trim();
-                  return pw.Text('Koordinator Pelaksana Fungsi : $nama');
+                  return pw.Text('Koordinator Pelaksana Fungsi : $nama', style: textStyle);
                 } else {
-                  // Jika pelaksana biasa
-                  return pw.Text('Pelaksana ${idx + 1} : $nama');
+                  return pw.Text('Pelaksana ${entry.key + 1} : $nama', style: textStyle);
                 }
               }),
-              
               pw.SizedBox(height: 12),
-              pw.Text('Catatan: ${data.catatan.isEmpty ? "-" : data.catatan}'),
 
-              pw.Spacer(),
-              pw.Divider(),
-              pw.Text('Dicetak pada: $waktuCetak', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+              // CATATAN
+              pw.Text('Catatan:', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 4),
+              // Menggunakan Table agar kotak menyesuaikan panjang teks (default 2 baris)
+              pw.Table(
+                columnWidths: {0: const pw.FlexColumnWidth()},
+                children: [
+                  pw.TableRow(
+                    children: [
+                      pw.Container(
+                        constraints: const pw.BoxConstraints(minHeight: 36), // Setara 2 baris
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text(
+                          data.catatan.isEmpty ? "-" : data.catatan, 
+                          style: textStyle,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ],
           );
         },
