@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'genset/pdf_blanko_generator.dart';
 import 'genset/pdf_preview_screen.dart';
+import 'global_riwayat_screen.dart'; // Pastikan ini diimport untuk sidebar
 
 class CetakBlankoScreen extends StatefulWidget {
   const CetakBlankoScreen({super.key});
@@ -27,7 +28,62 @@ class _CetakBlankoScreenState extends State<CetakBlankoScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
+      // ==========================================
+      // TAMBAHKAN DRAWER DI SINI
+      // ==========================================
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Color(0xFF3F51B5)),
+              child: Text(
+                'Menu Utama',
+                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Pengisian'),
+              onTap: () {
+                // Kembali ke halaman utama (pengisian)
+                Navigator.popUntil(context, (route) => route.isFirst);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Riwayat Semua Perawatan'),
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const GlobalRiwayatScreen()),
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.print),
+              title: const Text('Cetak Tabel Kosong'),
+              selected: true, // Menandakan sedang di halaman ini
+              selectedTileColor: const Color(0xFFE8EAF6),
+              selectedColor: const Color(0xFF3F51B5),
+              onTap: () {
+                Navigator.pop(context); // Tutup drawer saja karena sudah di halaman ini
+              },
+            ),
+          ],
+        ),
+      ),
+      // ==========================================
+      // APPBAR: GANTI IKON PANAH JADI GARIS TIGA
+      // ==========================================
       appBar: AppBar(
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu), // Ikon Garis Tiga
+            onPressed: () => Scaffold.of(context).openDrawer(), // Membuka sidebar
+          ),
+        ),
         title: const Text('Cetak Tabel Kosong'),
         backgroundColor: const Color(0xFF3F51B5),
         foregroundColor: Colors.white,
