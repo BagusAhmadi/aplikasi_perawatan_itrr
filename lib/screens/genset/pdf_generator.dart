@@ -11,13 +11,15 @@ class PdfGenerator {
     final formatter = DateFormat('EEEE, dd MMMM yyyy, HH:mm', 'id_ID');
     final waktuCetak = '${formatter.format(DateTime.now())} WIB';
 
-    // Memuat logo (Opsional)
+    // ==========================================
+    // BAGIAN 1: MEMUAT LOGO (OPSIONAL)
+    // ==========================================
     pw.ImageProvider? logoImage;
     try {
       final ByteData logoData = await rootBundle.load('assets/logo.png');
       logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
     } catch (e) {
-      // Abaikan jika logo tidak ada
+      // Abaikan jika logo belum ada di folder assets
     }
 
     doc.addPage(
@@ -64,8 +66,8 @@ class PdfGenerator {
                 border: pw.TableBorder.all(color: PdfColors.grey400),
                 children: [
                   pw.TableRow(children: [
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Item')),
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Kondisi / Nilai')),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Item', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Kondisi / Nilai', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
                   ]),
                   
                   // Data Radio (Baik/Rusak)
@@ -96,8 +98,8 @@ class PdfGenerator {
                 border: pw.TableBorder.all(color: PdfColors.grey400),
                 children: [
                   pw.TableRow(children: [
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Item')),
-                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Nilai')),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Item', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Nilai', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
                   ]),
                   // Hanya data "Saat Running"
                   ...[
@@ -113,10 +115,25 @@ class PdfGenerator {
               pw.SizedBox(height: 24),
 
               // ==========================================
-              // BAGIAN 6: PELAKSANA & CATATAN
+              // BAGIAN 6: PELAKSANA & CATATAN (DIPERBARUI)
               // ==========================================
               pw.Text('Pelaksana:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              ...data.pelaksana.map((p) => pw.Text('- $p')),
+              
+              // Looping data pelaksana dari database
+              ...data.pelaksana.asMap().entries.map((entry) {
+                int idx = entry.key;
+                String nama = entry.value;
+                
+                // Jika data disimpan sebagai "Koordinator: Nama", kita ekstrak
+                if (nama.startsWith('Koordinator:')) {
+                  nama = nama.replaceFirst('Koordinator:', '').trim();
+                  return pw.Text('Koordinator Pelaksana Fungsi : $nama');
+                } else {
+                  // Jika pelaksana biasa
+                  return pw.Text('Pelaksana ${idx + 1} : $nama');
+                }
+              }),
+              
               pw.SizedBox(height: 12),
               pw.Text('Catatan: ${data.catatan.isEmpty ? "-" : data.catatan}'),
 

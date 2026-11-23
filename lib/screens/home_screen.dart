@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'genset/genset_layout.dart';
 import 'global_riwayat_screen.dart'; // Import halaman riwayat global
+import 'cetak_blanko_screen.dart';   // Import halaman cetak blanko
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,7 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
-      // Menambahkan Sidebar (Drawer)
+      // ==========================================
+      // SIDEBAR (DRAWER)
+      // ==========================================
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
@@ -47,6 +50,8 @@ class _HomeScreenState extends State<HomeScreen> {
               leading: const Icon(Icons.home),
               title: const Text('Pengisian'),
               selected: _selectedIndex == 0,
+              selectedTileColor: const Color(0xFFE8EAF6),
+              selectedColor: const Color(0xFF3F51B5),
               onTap: () {
                 setState(() => _selectedIndex = 0);
                 Navigator.pop(context);
@@ -56,32 +61,54 @@ class _HomeScreenState extends State<HomeScreen> {
               leading: const Icon(Icons.history),
               title: const Text('Riwayat Semua Perawatan'),
               selected: _selectedIndex == 1,
+              selectedTileColor: const Color(0xFFE8EAF6),
+              selectedColor: const Color(0xFF3F51B5),
               onTap: () {
                 setState(() => _selectedIndex = 1);
                 Navigator.pop(context);
               },
             ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.print),
+              title: const Text('Cetak Tabel Kosong'),
+              onTap: () {
+                Navigator.pop(context); // Tutup sidebar
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CetakBlankoScreen(),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
+      // ==========================================
+      // APPBAR
+      // ==========================================
       appBar: AppBar(
         title: Text(_selectedIndex == 0 ? 'Aplikasi Perawatan' : 'Riwayat Semua'),
         backgroundColor: const Color(0xFF3F51B5),
         foregroundColor: Colors.white,
       ),
+      // ==========================================
+      // ISI HALAMAN
+      // ==========================================
       body: _selectedIndex == 0 
           ? _buildFormPengisian(isFormComplete, gedungTerpilih)
           : const GlobalRiwayatScreen(),
     );
   }
 
+  // ==========================================
+  // UI FORM PENGISIAN (DROPDOWN BERTINGKAT)
+  // ==========================================
   Widget _buildFormPengisian(bool isFormComplete, String gedungTerpilih) {
     return SingleChildScrollView(
       child: Column(
         children: [
-          // ... (Seluruh UI Form Dropdown dari kode home_screen sebelumnya) ...
-          // (Mulai dari Container biru, Pilih Instalasi, Periode, SSK, Jenis, sampai Tombol Buka)
-          
           Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
@@ -198,7 +225,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ... (_buildLabel dan _buildDropdown tetap sama seperti sebelumnya) ...
+  // ==========================================
+  // HELPER UNTUK LABEL & DROPDOWN
+  // ==========================================
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
