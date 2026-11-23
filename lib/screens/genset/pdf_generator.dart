@@ -25,18 +25,22 @@ class PdfGenerator {
     try {
       final ByteData logoData = await rootBundle.load('assets/logo.png');
       logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
-    } catch (e) {}
+    } catch (e) {
+      // Abaikan jika logo tidak ada
+    }
 
     doc.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.only(left: 32, right: 32, top: 32, bottom: 16), // Margin bawah dikurangi
+        margin: const pw.EdgeInsets.only(left: 32, right: 32, top: 32, bottom: 16),
         theme: theme,
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // HEADER
+              // ==========================================
+              // HEADER KOP SURAT
+              // ==========================================
               pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
                 children: [
@@ -54,12 +58,16 @@ class PdfGenerator {
               pw.Divider(thickness: 2),
               pw.SizedBox(height: 12),
 
-              // INFO
+              // ==========================================
+              // INFO UMUM
+              // ==========================================
               pw.Text('Tanggal: ${DateFormat('dd/MM/yyyy').format(data.tanggal)}', style: textStyle),
               pw.Text('Gedung: ${data.gedung}', style: textStyle),
               pw.SizedBox(height: 16),
 
-              // TABEL A
+              // ==========================================
+              // TABEL A. SEBELUM
+              // ==========================================
               pw.Text('A. Pemeriksaan Sebelum Running Test', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 8),
               pw.Table(
@@ -85,7 +93,9 @@ class PdfGenerator {
               ),
               pw.SizedBox(height: 16),
 
-              // TABEL B
+              // ==========================================
+              // TABEL B. SAAT RUNNING
+              // ==========================================
               pw.Text('B. Pemeriksaan Saat Running Test', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 8),
               pw.Table(
@@ -107,30 +117,54 @@ class PdfGenerator {
               ),
               pw.SizedBox(height: 24),
 
-              // PELAKSANA
+              // ==========================================
+              // PELAKSANA (TABEL TANPA GARIS)
+              // ==========================================
               pw.Text('Pelaksana:', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold)),
-              ...data.pelaksana.asMap().entries.map((entry) {
-                String nama = entry.value;
-                if (nama.startsWith('Koordinator:')) {
-                  nama = nama.replaceFirst('Koordinator:', '').trim();
-                  return pw.Text('Koordinator Pelaksana Fungsi : $nama', style: textStyle);
-                } else {
-                  return pw.Text('Pelaksana ${entry.key + 1} : $nama', style: textStyle);
-                }
-              }),
+              pw.SizedBox(height: 4),
+              pw.Table(
+                border: pw.TableBorder.all(width: 0, color: PdfColors.white), 
+                columnWidths: {
+                  0: const pw.FixedColumnWidth(180), 
+                  1: const pw.FixedColumnWidth(10),  
+                  2: const pw.FlexColumnWidth(),     
+                },
+                children: [
+                  ...data.pelaksana.asMap().entries.map((entry) {
+                    String nama = entry.value;
+                    String label = '';
+                    
+                    if (nama.startsWith('Koordinator:')) {
+                      nama = nama.replaceFirst('Koordinator:', '').trim();
+                      label = 'Koordinator Pelaksana Fungsi';
+                    } else {
+                      label = 'Pelaksana ${entry.key + 1}';
+                    }
+                    
+                    return pw.TableRow(
+                      children: [
+                        pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text(label, style: textStyle)),
+                        pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text(':', style: textStyle)),
+                        pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text(nama, style: textStyle)),
+                      ],
+                    );
+                  }), // <-- Tambahkan kurung tutup dan koma di sini
+                ], // <-- Ini kurung tutup list untuk children Table
+              ),
               pw.SizedBox(height: 12),
 
-              // CATATAN
+              // ==========================================
+              // CATATAN (MINIMAL 2 BARIS)
+              // ==========================================
               pw.Text('Catatan:', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 4),
-              // Menggunakan Table agar kotak menyesuaikan panjang teks (default 2 baris)
               pw.Table(
                 columnWidths: {0: const pw.FlexColumnWidth()},
                 children: [
                   pw.TableRow(
                     children: [
                       pw.Container(
-                        constraints: const pw.BoxConstraints(minHeight: 36), // Setara 2 baris
+                        constraints: const pw.BoxConstraints(minHeight: 36), // Minimal 2 baris kosong
                         padding: const pw.EdgeInsets.all(4),
                         child: pw.Text(
                           data.catatan.isEmpty ? "-" : data.catatan, 

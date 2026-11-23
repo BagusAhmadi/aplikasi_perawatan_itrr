@@ -7,28 +7,38 @@ class PdfBlankoGenerator {
   static Future<Uint8List> buatBlanko({required String gedung}) async {
     final doc = pw.Document();
 
-    // Memuat Font
+    // 1. Memuat Font Times New Roman
     final fontData = await rootBundle.load('assets/fonts/TIMES.TTF');
     final ttf = pw.Font.ttf(fontData);
-    final theme = pw.ThemeData.withFont(base: ttf, bold: ttf);
+    
+    // 2. Tema Font Standar
+    final theme = pw.ThemeData.withFont(
+      base: ttf,
+      bold: ttf, 
+    );
     final textStyle = pw.TextStyle(font: ttf, fontSize: 12);
 
+    // Memuat Logo
     pw.ImageProvider? logoImage;
     try {
       final ByteData logoData = await rootBundle.load('assets/logo.png');
       logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
-    } catch (e) {}
+    } catch (e) {
+      // Abaikan jika logo tidak ada
+    }
 
     doc.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.only(left: 32, right: 32, top: 32, bottom: 16), // Margin bawah dikurangi
+        margin: const pw.EdgeInsets.only(left: 32, right: 32, top: 32, bottom: 16),
         theme: theme,
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // HEADER
+              // ==========================================
+              // HEADER KOP SURAT
+              // ==========================================
               pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
                 children: [
@@ -46,12 +56,16 @@ class PdfBlankoGenerator {
               pw.Divider(thickness: 2),
               pw.SizedBox(height: 12),
 
-              // INFO
+              // ==========================================
+              // INFO UMUM (KOSONG)
+              // ==========================================
               pw.Text('Tanggal: ', style: textStyle), 
               pw.Text('Gedung: $gedung', style: textStyle),
               pw.SizedBox(height: 16),
 
-              // TABEL A
+              // ==========================================
+              // TABEL A. SEBELUM (KOSONG)
+              // ==========================================
               pw.Text('A. Pemeriksaan Sebelum Running Test', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 8),
               _buildTabelBlanko(textStyle, [
@@ -60,7 +74,9 @@ class PdfBlankoGenerator {
               ]),
               pw.SizedBox(height: 16),
 
-              // TABEL B
+              // ==========================================
+              // TABEL B. SAAT RUNNING (KOSONG)
+              // ==========================================
               pw.Text('B. Pemeriksaan Saat Running Test', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 8),
               _buildTabelBlanko(textStyle, [
@@ -70,17 +86,61 @@ class PdfBlankoGenerator {
               ]),
               pw.SizedBox(height: 20),
 
-              // PELAKSANA
+              // ==========================================
+              // PELAKSANA (TABEL TANPA GARIS)
+              // ==========================================
               pw.Text('Pelaksana:', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold)),
-              pw.Text('Pelaksana 1 : ', style: textStyle), 
-              pw.Text('Pelaksana 2 : ', style: textStyle), 
-              pw.Text('Pelaksana 3 : ', style: textStyle), 
-              pw.Text('Pelaksana 4 : ', style: textStyle), 
-              pw.SizedBox(height: 8),
-              pw.Text('Koordinator Pelaksana Fungsi : ', style: textStyle), 
+              pw.SizedBox(height: 4),
+              pw.Table(
+                border: pw.TableBorder.all(width: 0, color: PdfColors.white), // Tanpa garis
+                columnWidths: {
+                  0: const pw.FixedColumnWidth(180), // Kunci lebar label
+                  1: const pw.FixedColumnWidth(10),  // Lebar titik dua
+                  2: const pw.FlexColumnWidth(),     // Nama (kosong)
+                },
+                children: [
+                  pw.TableRow(
+                    children: [
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text('Pelaksana 1', style: textStyle)),
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text(':', style: textStyle)),
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text(' ', style: textStyle)),
+                    ],
+                  ),
+                  pw.TableRow(
+                    children: [
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text('Pelaksana 2', style: textStyle)),
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text(':', style: textStyle)),
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text(' ', style: textStyle)),
+                    ],
+                  ),
+                  pw.TableRow(
+                    children: [
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text('Pelaksana 3', style: textStyle)),
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text(':', style: textStyle)),
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text(' ', style: textStyle)),
+                    ],
+                  ),
+                  pw.TableRow(
+                    children: [
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text('Pelaksana 4', style: textStyle)),
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text(':', style: textStyle)),
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text(' ', style: textStyle)),
+                    ],
+                  ),
+                  pw.TableRow(
+                    children: [
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text('Koordinator Pelaksana Fungsi', style: textStyle)),
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text(':', style: textStyle)),
+                      pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 4), child: pw.Text(' ', style: textStyle)),
+                    ],
+                  ),
+                ],
+              ),
               pw.SizedBox(height: 12),
 
-              // CATATAN (Kosong 2 Baris)
+              // ==========================================
+              // CATATAN (MINIMAL 2 BARIS KOSONG)
+              // ==========================================
               pw.Text('Catatan:', style: textStyle.copyWith(fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 4),
               pw.Table(
@@ -89,9 +149,9 @@ class PdfBlankoGenerator {
                   pw.TableRow(
                     children: [
                       pw.Container(
-                        constraints: const pw.BoxConstraints(minHeight: 36), // 2 Baris kosong
+                        constraints: const pw.BoxConstraints(minHeight: 36), // Minimal 2 baris
                         padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text(' ', style: textStyle),
+                        child: pw.Text(' ', style: textStyle), // Kosong
                       ),
                     ],
                   ),
@@ -106,6 +166,9 @@ class PdfBlankoGenerator {
     return doc.save();
   }
 
+  // ==========================================
+  // HELPER UNTUK TABEL BLANKO
+  // ==========================================
   static pw.Widget _buildTabelBlanko(pw.TextStyle style, List<String> items) {
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey400),
