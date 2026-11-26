@@ -59,7 +59,6 @@ class _HomeScreenState extends State<HomeScreen> {
               title: const Text('Riwayat Semua Perawatan'),
               onTap: () {
                 Navigator.pop(context); // Tutup sidebar
-                // Pindah ke halaman baru menggunakan Push
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const GlobalRiwayatScreen()),
@@ -83,139 +82,140 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       // ==========================================
-      // APPBAR (HANYA SATU UNTUK HALAMAN INI)
+      // APPBAR
       // ==========================================
       appBar: AppBar(
-        title: const Text('Aplikasi Perawatan'), // Judul tetap
+        title: const Text('Aplikasi Perawatan'),
         backgroundColor: const Color(0xFF3F51B5),
         foregroundColor: Colors.white,
       ),
       // ==========================================
-      // ISI HALAMAN (HANYA FORM PENGISIAN)
+      // ISI HALAMAN (FORM PENGISIAN)
       // ==========================================
-      body: _buildFormPengisian(isFormComplete, gedungTerpilih),
-    );
-  }
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildLabel('Pilih Instalasi / Kawasan'),
+                  _buildDropdown(
+                    hint: '-- Pilih Instalasi --',
+                    value: _selectedInstalasi,
+                    items: ['ITRR'],
+                    enabled: true,
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedInstalasi = val;
+                        _selectedPeriode = null;
+                        _selectedSSK = null;
+                        _selectedJenis = null;
+                      });
+                    },
+                  ),
 
-  // ==========================================
-  // UI FORM PENGISIAN (DROPDOWN BERTINGKAT)
-  // ==========================================
-  Widget _buildFormPengisian(bool isFormComplete, String gedungTerpilih) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildLabel('Pilih Instalasi / Kawasan'),
-                _buildDropdown(
-                  hint: '-- Pilih Instalasi --',
-                  value: _selectedInstalasi,
-                  items: ['ITRR'],
-                  enabled: true,
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedInstalasi = val;
-                      _selectedPeriode = null;
-                      _selectedSSK = null;
-                      _selectedJenis = null;
-                    });
-                  },
-                ),
+                  _buildLabel('Periode'),
+                  _buildDropdown(
+                    hint: _selectedInstalasi == null ? '-- Pilih Instalasi Dulu --' : '-- Pilih Periode --',
+                    value: _selectedPeriode,
+                    items: _selectedInstalasi != null ? ['1 Mingguan'] : [],
+                    enabled: _selectedInstalasi != null,
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedPeriode = val;
+                        _selectedSSK = null;
+                        _selectedJenis = null;
+                      });
+                    },
+                  ),
 
-                _buildLabel('Periode'),
-                _buildDropdown(
-                  hint: _selectedInstalasi == null ? '-- Pilih Instalasi Dulu --' : '-- Pilih Periode --',
-                  value: _selectedPeriode,
-                  items: _selectedInstalasi != null ? ['1 Mingguan'] : [],
-                  enabled: _selectedInstalasi != null,
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedPeriode = val;
-                      _selectedSSK = null;
-                      _selectedJenis = null;
-                    });
-                  },
-                ),
+                  _buildLabel('SSK'),
+                  _buildDropdown(
+                    hint: _selectedPeriode == null ? '-- Pilih Periode Dulu --' : '-- Pilih SSK --',
+                    value: _selectedSSK,
+                    items: _selectedPeriode != null 
+                        ? [
+                            'Sistem Catudaya Listrik Emergency GD 11',
+                            'Sistem Catudaya Listrik Emergency GD 13'
+                          ] 
+                        : [],
+                    enabled: _selectedPeriode != null,
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedSSK = val;
+                        _selectedJenis = null;
+                      });
+                    },
+                  ),
 
-                _buildLabel('SSK'),
-                _buildDropdown(
-                  hint: _selectedPeriode == null ? '-- Pilih Periode Dulu --' : '-- Pilih SSK --',
-                  value: _selectedSSK,
-                  items: _selectedPeriode != null 
-                      ? [
-                          'Sistem Catudaya Listrik Emergency GD 11',
-                          'Sistem Catudaya Listrik Emergency GD 13'
-                        ] 
-                      : [],
-                  enabled: _selectedPeriode != null,
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedSSK = val;
-                      _selectedJenis = null;
-                    });
-                  },
-                ),
+                  _buildLabel('Jenis Pengujian / Perawatan'),
+                  _buildDropdown(
+                    hint: _selectedSSK == null ? '-- Pilih SSK Dulu --' : '-- Pilih Jenis Pengujian --',
+                    value: _selectedJenis,
+                    items: _selectedSSK != null ? ['Uji running tanpa beban 15 menit'] : [],
+                    enabled: _selectedSSK != null,
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedJenis = val;
+                      });
+                    },
+                  ),
 
-                _buildLabel('Jenis Pengujian / Perawatan'),
-                _buildDropdown(
-                  hint: _selectedSSK == null ? '-- Pilih SSK Dulu --' : '-- Pilih Jenis Pengujian --',
-                  value: _selectedJenis,
-                  items: _selectedSSK != null ? ['Uji running tanpa beban 15 menit'] : [],
-                  enabled: _selectedSSK != null,
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedJenis = val;
-                    });
-                  },
-                ),
+                  const SizedBox(height: 20),
 
-                const SizedBox(height: 20),
-
-                ElevatedButton(
-                  onPressed: isFormComplete
-                      ? () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => GensetLayout(
-                                gedungSSK: gedungTerpilih,
+                  ElevatedButton(
+                    onPressed: isFormComplete
+                        ? () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => GensetLayout(
+                                  gedungSSK: gedungTerpilih,
+                                ),
                               ),
-                            ),
-                          );
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3F51B5),
-                    disabledBackgroundColor: const Color(0xFFB0BEC5),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    elevation: isFormComplete ? 4 : 0,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text(
-                        'Buka Form Pengujian',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            ).then((_) {
+                              // RESET FORM SETELAH KEMBALI DARI HALAMAN PENGUJIAN
+                              setState(() {
+                                _selectedInstalasi = null;
+                                _selectedPeriode = null;
+                                _selectedSSK = null;
+                                _selectedJenis = null;
+                              });
+                            });
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3F51B5),
+                      disabledBackgroundColor: const Color(0xFFB0BEC5),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward_ios, size: 16),
-                    ],
+                      elevation: isFormComplete ? 4 : 0,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Text(
+                          'Buka Form Pengujian',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward_ios, size: 16),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
