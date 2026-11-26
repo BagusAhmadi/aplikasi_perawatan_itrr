@@ -11,8 +11,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0; // 0 = Pengisian, 1 = Riwayat Global
-
   // State Form Dropdown
   String? _selectedInstalasi;
   String? _selectedPeriode;
@@ -49,27 +47,25 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               leading: const Icon(Icons.home),
               title: const Text('Pengisian'),
-              selected: _selectedIndex == 0,
+              selected: true, // Selalu aktif karena kita ada di halaman ini
               selectedTileColor: const Color(0xFFE8EAF6),
               selectedColor: const Color(0xFF3F51B5),
               onTap: () {
-                setState(() => _selectedIndex = 0);
-                Navigator.pop(context);
+                Navigator.pop(context); // Hanya tutup drawer
               },
             ),
             ListTile(
               leading: const Icon(Icons.history),
               title: const Text('Riwayat Semua Perawatan'),
-              selected: _selectedIndex == 1,
-              selectedTileColor: const Color(0xFFE8EAF6),
-              selectedColor: const Color(0xFF3F51B5),
               onTap: () {
-                setState(() => _selectedIndex = 1);
-                Navigator.pop(context);
+                Navigator.pop(context); // Tutup sidebar
+                // Pindah ke halaman baru menggunakan Push
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const GlobalRiwayatScreen()),
+                );
               },
             ),
-            // Garis pemisah (Divider) sudah dihapus
-            
             ListTile(
               leading: const Icon(Icons.print),
               title: const Text('Cetak Tabel Kosong'),
@@ -87,19 +83,17 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       // ==========================================
-      // APPBAR
+      // APPBAR (HANYA SATU UNTUK HALAMAN INI)
       // ==========================================
       appBar: AppBar(
-        title: Text(_selectedIndex == 0 ? 'Aplikasi Perawatan' : 'Riwayat Semua'),
+        title: const Text('Aplikasi Perawatan'), // Judul tetap
         backgroundColor: const Color(0xFF3F51B5),
         foregroundColor: Colors.white,
       ),
       // ==========================================
-      // ISI HALAMAN
+      // ISI HALAMAN (HANYA FORM PENGISIAN)
       // ==========================================
-      body: _selectedIndex == 0 
-          ? _buildFormPengisian(isFormComplete, gedungTerpilih)
-          : const GlobalRiwayatScreen(),
+      body: _buildFormPengisian(isFormComplete, gedungTerpilih),
     );
   }
 
