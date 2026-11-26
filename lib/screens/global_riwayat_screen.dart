@@ -6,6 +6,7 @@ import 'genset/genset_database.dart';
 import 'genset/genset_riwayat_logic.dart';
 import 'genset/pdf_generator.dart';
 import 'genset/pdf_preview_screen.dart';
+import 'cetak_blanko_screen.dart'; // Import untuk navigasi sidebar
 
 class GlobalRiwayatScreen extends StatefulWidget {
   const GlobalRiwayatScreen({super.key});
@@ -31,7 +32,6 @@ class _GlobalRiwayatScreenState extends State<GlobalRiwayatScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    // Mengambil semua data dari database
     final data = await GensetDatabase.bacaSemua();
     setState(() {
       _allData = data;
@@ -72,7 +72,6 @@ class _GlobalRiwayatScreenState extends State<GlobalRiwayatScreen> {
     }
   }
 
-  // --- LOGIKA KALENDER ---
   bool _hasDataOnDate(DateTime date) {
     return _allData.any((item) => 
       item.tanggal.year == date.year &&
@@ -94,21 +93,73 @@ class _GlobalRiwayatScreenState extends State<GlobalRiwayatScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
-    // Membungkus seluruh konten dengan Scaffold dan AppBar
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
+      // ==========================================
+      // MENAMBAHKAN DRAWER / SIDEBAR
+      // ==========================================
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Color(0xFF3F51B5)),
+              child: Text(
+                'Menu Utama',
+                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Pengisian'),
+              onTap: () {
+                Navigator.popUntil(context, (route) => route.isFirst);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Riwayat Semua Perawatan'),
+              selected: true,
+              selectedTileColor: const Color(0xFFE8EAF6),
+              selectedColor: const Color(0xFF3F51B5),
+              onTap: () {
+                Navigator.pop(context); // Tutup drawer jika sedang di halaman ini
+              },
+            ),
+            // Garis pemisah (Divider) dihapus
+            ListTile(
+              leading: const Icon(Icons.print),
+              title: const Text('Cetak Tabel Kosong'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CetakBlankoScreen()),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
       appBar: AppBar(
         title: const Text('Riwayat Semua Perawatan'),
         backgroundColor: const Color(0xFF3F51B5),
         foregroundColor: Colors.white,
-        // Tombol back otomatis muncul karena halaman ini dibuka via Navigator.push
+        // ==========================================
+        // MENGGANTI TOMBOL BACK JADI HAMBURGER
+        // ==========================================
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu), 
+            onPressed: () => Scaffold.of(context).openDrawer(), 
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Tombol Ekspor (Tanpa Filter Gedung)
             Align(
               alignment: Alignment.centerRight,
               child: ElevatedButton.icon(
@@ -125,7 +176,6 @@ class _GlobalRiwayatScreenState extends State<GlobalRiwayatScreen> {
             ),
             const SizedBox(height: 16),
 
-            // KOTAK KALENDER
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -330,7 +380,6 @@ class _GlobalRiwayatScreenState extends State<GlobalRiwayatScreen> {
     );
   }
 
-  // Fungsi Ekspor Khusus Global (Semua Gedung)
   Future<void> _eksporSemuaData() async {
     showModalBottomSheet(
       context: context,
@@ -363,7 +412,7 @@ class _GlobalRiwayatScreenState extends State<GlobalRiwayatScreen> {
                       helpText: 'Pilih Bulan (Tanggal tidak penting)',
                     );
                     if (picked != null) {
-                      // Catatan: Perlu penyesuaian pada GensetRiwayatLogic jika ingin ekspor per bulan dengan filter 'semua'
+                      // Bisa disesuaikan untuk filter bulan dengan 'semua'
                     }
                   },
                 ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'genset/pdf_blanko_generator.dart';
 import 'genset/pdf_preview_screen.dart';
-import 'global_riwayat_screen.dart'; // Pastikan ini diimport untuk sidebar
+import 'global_riwayat_screen.dart';
 
 class CetakBlankoScreen extends StatefulWidget {
   const CetakBlankoScreen({super.key});
@@ -46,7 +46,7 @@ class _CetakBlankoScreenState extends State<CetakBlankoScreen> {
               leading: const Icon(Icons.home),
               title: const Text('Pengisian'),
               onTap: () {
-                // Kembali ke halaman utama (pengisian)
+                // Kembali ke halaman paling awal (Home)
                 Navigator.popUntil(context, (route) => route.isFirst);
               },
             ),
@@ -54,15 +54,15 @@ class _CetakBlankoScreenState extends State<CetakBlankoScreen> {
               leading: const Icon(Icons.history),
               title: const Text('Riwayat Semua Perawatan'),
               onTap: () {
-                Navigator.pop(context); // Tutup sidebar dulu
-                // Gunakan Navigator.push (BUKAN pushReplacement) agar halaman tidak hancur
+                Navigator.pop(context); // Tutup sidebar
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const GlobalRiwayatScreen()),
                 );
               },
             ),
-            const Divider(),
+            // Garis Pemisah (Divider) sudah dihapus
+            
             ListTile(
               leading: const Icon(Icons.print),
               title: const Text('Cetak Tabel Kosong'),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'genset/genset_layout.dart';
-import 'global_riwayat_screen.dart'; // Import halaman riwayat global
-import 'cetak_blanko_screen.dart';   // Import halaman cetak blanko
+import 'global_riwayat_screen.dart';
+import 'cetak_blanko_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -68,7 +68,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(context);
               },
             ),
-            const Divider(),
+            // Garis pemisah (Divider) sudah dihapus
+            
             ListTile(
               leading: const Icon(Icons.print),
               title: const Text('Cetak Tabel Kosong'),
