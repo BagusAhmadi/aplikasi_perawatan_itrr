@@ -26,209 +26,220 @@ class _CetakBlankoScreenState extends State<CetakBlankoScreen> {
         _selectedSSK != null &&
         _selectedJenis != null;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
-      // ==========================================
-      // DRAWER / SIDEBAR
-      // ==========================================
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Color(0xFF3F51B5)),
-              child: Text(
-                'Menu Utama',
-                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+    // ==========================================
+    // POP SCOPE: MENANGKAP TOMBOL BACK ANDROID
+    // ==========================================
+    return PopScope(
+      canPop: false, // Mencegah pop otomatis
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        // Jika tombol back ditekan, langsung lompat ke halaman pertama (Pengisian)
+        Navigator.popUntil(context, (route) => route.isFirst);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F6FA),
+        // ==========================================
+        // DRAWER / SIDEBAR
+        // ==========================================
+        drawer: Drawer(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              const DrawerHeader(
+                decoration: BoxDecoration(color: Color(0xFF3F51B5)),
+                child: Text(
+                  'Menu Utama',
+                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text('Pengisian'),
-              onTap: () {
-                // Kembali ke halaman paling awal (Home)
-                Navigator.popUntil(context, (route) => route.isFirst);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.history),
-              title: const Text('Riwayat Semua Perawatan'),
-              onTap: () {
-                Navigator.pop(context); // Tutup sidebar
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const GlobalRiwayatScreen()),
-                );
-              },
-            ),
-            // Garis Pemisah (Divider) sudah dihapus
-            
-            ListTile(
-              leading: const Icon(Icons.print),
-              title: const Text('Cetak Tabel Kosong'),
-              selected: true, // Menandakan sedang di halaman ini
-              selectedTileColor: const Color(0xFFE8EAF6),
-              selectedColor: const Color(0xFF3F51B5),
-              onTap: () {
-                Navigator.pop(context); // Tutup drawer saja karena sudah di halaman ini
-              },
-            ),
-          ],
-        ),
-      ),
-      // ==========================================
-      // APPBAR: IKON GARIS TIGA
-      // ==========================================
-      appBar: AppBar(
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu), // Ikon Garis Tiga
-            onPressed: () => Scaffold.of(context).openDrawer(), // Membuka sidebar
+              ListTile(
+                leading: const Icon(Icons.home),
+                title: const Text('Pengisian'),
+                onTap: () {
+                  // Kembali ke halaman paling awal (Home)
+                  Navigator.popUntil(context, (route) => route.isFirst);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('Riwayat Semua Perawatan'),
+                onTap: () {
+                  Navigator.pop(context); // Tutup sidebar
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const GlobalRiwayatScreen()),
+                  );
+                },
+              ),
+              // Garis Pemisah (Divider) sudah dihapus
+              
+              ListTile(
+                leading: const Icon(Icons.print),
+                title: const Text('Cetak Tabel Kosong'),
+                selected: true, // Menandakan sedang di halaman ini
+                selectedTileColor: const Color(0xFFE8EAF6),
+                selectedColor: const Color(0xFF3F51B5),
+                onTap: () {
+                  Navigator.pop(context); // Tutup drawer saja karena sudah di halaman ini
+                },
+              ),
+            ],
           ),
         ),
-        title: const Text('Cetak Tabel Kosong'),
-        backgroundColor: const Color(0xFF3F51B5),
-        foregroundColor: Colors.white,
-      ),
-      // ==========================================
-      // ISI HALAMAN
-      // ==========================================
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. Dropdown Instalasi
-            _buildLabel('Pilih Instalasi / Kawasan'),
-            _buildDropdown(
-              hint: '-- Pilih Instalasi --',
-              value: _selectedInstalasi,
-              items: ['ITRR'],
-              enabled: true,
-              onChanged: (val) {
-                setState(() {
-                  _selectedInstalasi = val;
-                  _selectedPeriode = null;
-                  _selectedSSK = null;
-                  _selectedJenis = null;
-                });
-              },
+        // ==========================================
+        // APPBAR: IKON GARIS TIGA
+        // ==========================================
+        appBar: AppBar(
+          leading: Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu), // Ikon Garis Tiga
+              onPressed: () => Scaffold.of(context).openDrawer(), // Membuka sidebar
             ),
-
-            // 2. Dropdown Periode
-            _buildLabel('Periode'),
-            _buildDropdown(
-              hint: _selectedInstalasi == null ? '-- Pilih Instalasi Dulu --' : '-- Pilih Periode --',
-              value: _selectedPeriode,
-              items: _selectedInstalasi != null ? ['1 Mingguan'] : [],
-              enabled: _selectedInstalasi != null,
-              onChanged: (val) {
-                setState(() {
-                  _selectedPeriode = val;
-                  _selectedSSK = null;
-                  _selectedJenis = null;
-                });
-              },
-            ),
-
-            // 3. Dropdown SSK
-            _buildLabel('SSK'),
-            _buildDropdown(
-              hint: _selectedPeriode == null ? '-- Pilih Periode Dulu --' : '-- Pilih SSK --',
-              value: _selectedSSK,
-              items: _selectedPeriode != null
-                  ? [
-                      'Sistem Catudaya Listrik Emergency GD 11',
-                      'Sistem Catudaya Listrik Emergency GD 13'
-                    ]
-                  : [],
-              enabled: _selectedPeriode != null,
-              onChanged: (val) {
-                setState(() {
-                  _selectedSSK = val;
-                  _selectedJenis = null;
-                });
-              },
-            ),
-
-            // 4. Dropdown Jenis Pengujian
-            _buildLabel('Jenis Pengujian / Perawatan'),
-            _buildDropdown(
-              hint: _selectedSSK == null ? '-- Pilih SSK Dulu --' : '-- Pilih Jenis Pengujian --',
-              value: _selectedJenis,
-              items: _selectedSSK != null ? ['Uji running tanpa beban 15 menit'] : [],
-              enabled: _selectedSSK != null,
-              onChanged: (val) {
-                setState(() {
-                  _selectedJenis = val;
-                });
-              },
-            ),
-
-            const SizedBox(height: 20),
-
-            // Tombol Cetak Tabel
-            ElevatedButton(
-              onPressed: (isFormComplete && !_isLoading)
-                  ? () async {
-                      setState(() => _isLoading = true);
-                      
-                      // Tentukan gedung dari SSK yang dipilih
-                      String gedung = _selectedSSK!.contains('GD 11') ? 'Gedung 11' : 'Gedung 13';
-
-                      try {
-                        // Buat PDF Kosong
-                        final pdfBytes = await PdfBlankoGenerator.buatBlanko(
-                          gedung: gedung,
-                        );
-
-                        if (!mounted) return;
-                        setState(() => _isLoading = false);
-
-                        // Buka Pratinjau PDF
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => PdfPreviewScreen(
-                              pdfBytes: pdfBytes,
-                              fileName: 'Tabel_Kosong_$gedung.pdf',
-                            ),
-                          ),
-                        );
-                      } catch (e) {
-                        if (!mounted) return;
-                        setState(() => _isLoading = false);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Gagal membuat PDF: $e'), backgroundColor: Colors.red),
-                        );
-                      }
-                    }
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3F51B5),
-                disabledBackgroundColor: const Color(0xFFB0BEC5),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                elevation: isFormComplete ? 4 : 0,
+          ),
+          title: const Text('Cetak Tabel Kosong'),
+          backgroundColor: const Color(0xFF3F51B5),
+          foregroundColor: Colors.white,
+        ),
+        // ==========================================
+        // ISI HALAMAN
+        // ==========================================
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. Dropdown Instalasi
+              _buildLabel('Pilih Instalasi / Kawasan'),
+              _buildDropdown(
+                hint: '-- Pilih Instalasi --',
+                value: _selectedInstalasi,
+                items: ['ITRR'],
+                enabled: true,
+                onChanged: (val) {
+                  setState(() {
+                    _selectedInstalasi = val;
+                    _selectedPeriode = null;
+                    _selectedSSK = null;
+                    _selectedJenis = null;
+                  });
+                },
               ),
-              child: _isLoading
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Text(
-                          'Cetak Tabel',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(Icons.print, size: 20),
-                      ],
-                    ),
-            ),
-          ],
+
+              // 2. Dropdown Periode
+              _buildLabel('Periode'),
+              _buildDropdown(
+                hint: _selectedInstalasi == null ? '-- Pilih Instalasi Dulu --' : '-- Pilih Periode --',
+                value: _selectedPeriode,
+                items: _selectedInstalasi != null ? ['1 Mingguan'] : [],
+                enabled: _selectedInstalasi != null,
+                onChanged: (val) {
+                  setState(() {
+                    _selectedPeriode = val;
+                    _selectedSSK = null;
+                    _selectedJenis = null;
+                  });
+                },
+              ),
+
+              // 3. Dropdown SSK
+              _buildLabel('SSK'),
+              _buildDropdown(
+                hint: _selectedPeriode == null ? '-- Pilih Periode Dulu --' : '-- Pilih SSK --',
+                value: _selectedSSK,
+                items: _selectedPeriode != null
+                    ? [
+                        'Sistem Catudaya Listrik Emergency GD 11',
+                        'Sistem Catudaya Listrik Emergency GD 13'
+                      ]
+                    : [],
+                enabled: _selectedPeriode != null,
+                onChanged: (val) {
+                  setState(() {
+                    _selectedSSK = val;
+                    _selectedJenis = null;
+                  });
+                },
+              ),
+
+              // 4. Dropdown Jenis Pengujian
+              _buildLabel('Jenis Pengujian / Perawatan'),
+              _buildDropdown(
+                hint: _selectedSSK == null ? '-- Pilih SSK Dulu --' : '-- Pilih Jenis Pengujian --',
+                value: _selectedJenis,
+                items: _selectedSSK != null ? ['Uji running tanpa beban 15 menit'] : [],
+                enabled: _selectedSSK != null,
+                onChanged: (val) {
+                  setState(() {
+                    _selectedJenis = val;
+                  });
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              // Tombol Cetak Tabel
+              ElevatedButton(
+                onPressed: (isFormComplete && !_isLoading)
+                    ? () async {
+                        setState(() => _isLoading = true);
+                        
+                        // Tentukan gedung dari SSK yang dipilih
+                        String gedung = _selectedSSK!.contains('GD 11') ? 'Gedung 11' : 'Gedung 13';
+
+                        try {
+                          // Buat PDF Kosong
+                          final pdfBytes = await PdfBlankoGenerator.buatBlanko(
+                            gedung: gedung,
+                          );
+
+                          if (!mounted) return;
+                          setState(() => _isLoading = false);
+
+                          // Buka Pratinjau PDF
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PdfPreviewScreen(
+                                pdfBytes: pdfBytes,
+                                fileName: 'Tabel_Kosong_$gedung.pdf',
+                              ),
+                            ),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          setState(() => _isLoading = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Gagal membuat PDF: $e'), backgroundColor: Colors.red),
+                          );
+                        }
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3F51B5),
+                  disabledBackgroundColor: const Color(0xFFB0BEC5),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: isFormComplete ? 4 : 0,
+                ),
+                child: _isLoading
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Text(
+                            'Cetak Tabel',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(width: 8),
+                          Icon(Icons.print, size: 20),
+                        ],
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
