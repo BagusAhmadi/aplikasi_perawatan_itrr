@@ -29,7 +29,7 @@ class _CetakBlankoScreenState extends State<CetakBlankoScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
       // ==========================================
-      // TAMBAHKAN DRAWER DI SINI
+      // DRAWER / SIDEBAR
       // ==========================================
       drawer: Drawer(
         child: ListView(
@@ -54,7 +54,9 @@ class _CetakBlankoScreenState extends State<CetakBlankoScreen> {
               leading: const Icon(Icons.history),
               title: const Text('Riwayat Semua Perawatan'),
               onTap: () {
-                Navigator.pushReplacement(
+                Navigator.pop(context); // Tutup sidebar dulu
+                // Gunakan Navigator.push (BUKAN pushReplacement) agar halaman tidak hancur
+                Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const GlobalRiwayatScreen()),
                 );
@@ -75,7 +77,7 @@ class _CetakBlankoScreenState extends State<CetakBlankoScreen> {
         ),
       ),
       // ==========================================
-      // APPBAR: GANTI IKON PANAH JADI GARIS TIGA
+      // APPBAR: IKON GARIS TIGA
       // ==========================================
       appBar: AppBar(
         leading: Builder(
@@ -88,6 +90,9 @@ class _CetakBlankoScreenState extends State<CetakBlankoScreen> {
         backgroundColor: const Color(0xFF3F51B5),
         foregroundColor: Colors.white,
       ),
+      // ==========================================
+      // ISI HALAMAN
+      // ==========================================
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(

@@ -92,100 +92,109 @@ class _GlobalRiwayatScreenState extends State<GlobalRiwayatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Tombol Ekspor (Tanpa Filter Gedung)
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                // Kita buat fungsi ekspor manual di sini untuk semua gedung
-                _eksporSemuaData();
-              },
-              icon: const Icon(Icons.save_alt),
-              label: const Text('Ekspor Semua Data'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueGrey[700],
-                foregroundColor: Colors.white,
+    // Membungkus seluruh konten dengan Scaffold dan AppBar
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F6FA),
+      appBar: AppBar(
+        title: const Text('Riwayat Semua Perawatan'),
+        backgroundColor: const Color(0xFF3F51B5),
+        foregroundColor: Colors.white,
+        // Tombol back otomatis muncul karena halaman ini dibuka via Navigator.push
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Tombol Ekspor (Tanpa Filter Gedung)
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  _eksporSemuaData();
+                },
+                icon: const Icon(Icons.save_alt),
+                label: const Text('Ekspor Semua Data'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueGrey[700],
+                  foregroundColor: Colors.white,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          // KOTAK KALENDER
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.chevron_left),
-                      onPressed: () => setState(() => _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1)),
-                    ),
-                    Text(
-                      DateFormat('MMMM yyyy', 'id_ID').format(_currentMonth),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.chevron_right),
-                      onPressed: () => setState(() => _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                
-                Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 320),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((day) => 
-                        SizedBox(
-                          width: 44, 
-                          child: Text(day, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold))
-                        )
-                      ).toList(),
+            // KOTAK KALENDER
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: () => setState(() => _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1)),
+                      ),
+                      Text(
+                        DateFormat('MMMM yyyy', 'id_ID').format(_currentMonth),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: () => setState(() => _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 320),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((day) => 
+                          SizedBox(
+                            width: 44, 
+                            child: Text(day, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold))
+                          )
+                        ).toList(),
+                      ),
                     ),
                   ),
-                ),
-                
-                const Divider(),
-                _buildCalendarGrid(),
-              ],
+                  
+                  const Divider(),
+                  _buildCalendarGrid(),
+                ],
+              ),
             ),
-          ),
-          
-          const SizedBox(height: 24),
-
-          if (_selectedDate != null) ...[
-            Text(
-              'Tanggal Terpilih: ${DateFormat('dd MMMM yyyy', 'id_ID').format(_selectedDate!)}',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
             
-            if (_getDataForSelectedDate().isEmpty)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                child: const Text('Tidak ada perawatan pada tanggal ini.', style: TextStyle(color: Colors.grey)),
-              )
-            else
-              ..._getDataForSelectedDate().map((item) => _buildRiwayatCard(item)),
+            const SizedBox(height: 24),
+
+            if (_selectedDate != null) ...[
+              Text(
+                'Tanggal Terpilih: ${DateFormat('dd MMMM yyyy', 'id_ID').format(_selectedDate!)}',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              
+              if (_getDataForSelectedDate().isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                  child: const Text('Tidak ada perawatan pada tanggal ini.', style: TextStyle(color: Colors.grey)),
+                )
+              else
+                ..._getDataForSelectedDate().map((item) => _buildRiwayatCard(item)),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -344,7 +353,20 @@ class _GlobalRiwayatScreenState extends State<GlobalRiwayatScreen> {
                     GensetRiwayatLogic.mulaiEksporDatabase(context, _loadData, filterGedung: 'semua');
                   },
                 ),
-                // ... (Bisa ditambahkan filter bulan/hari di sini jika mau)
+                ListTile(
+                  leading: const Icon(Icons.calendar_month),
+                  title: const Text('Per Bulan'),
+                  onTap: () async {
+                    Navigator.pop(ctx); 
+                    final picked = await showDatePicker(
+                      context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030),
+                      helpText: 'Pilih Bulan (Tanggal tidak penting)',
+                    );
+                    if (picked != null) {
+                      // Catatan: Perlu penyesuaian pada GensetRiwayatLogic jika ingin ekspor per bulan dengan filter 'semua'
+                    }
+                  },
+                ),
               ],
             ),
           ),
